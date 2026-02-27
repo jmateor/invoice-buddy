@@ -24,12 +24,14 @@ import {
   MonitorSmartphone,
   Settings,
   Shield,
+  ClipboardList,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const mainItems = [
   { title: "Dashboard", url: "/", icon: LayoutDashboard },
   { title: "Punto de Venta", url: "/pos", icon: MonitorSmartphone },
+  { title: "Órdenes de Servicio", url: "/ordenes-servicio", icon: ClipboardList },
   { title: "Clientes", url: "/clientes", icon: Users },
   { title: "Productos", url: "/productos", icon: Package },
   { title: "Facturas", url: "/facturas", icon: FileText },

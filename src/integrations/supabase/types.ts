@@ -390,6 +390,84 @@ export type Database = {
         }
         Relationships: []
       }
+      ordenes_servicio: {
+        Row: {
+          cliente_id: string
+          costo_estimado: number
+          created_at: string
+          diagnostico: string | null
+          equipo_descripcion: string
+          estado: string
+          factura_id: string | null
+          fecha_entrada: string
+          fecha_entrega: string | null
+          fecha_notificacion: string | null
+          id: string
+          marca: string | null
+          modelo: string | null
+          notas: string | null
+          problema_reportado: string
+          serial: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cliente_id: string
+          costo_estimado?: number
+          created_at?: string
+          diagnostico?: string | null
+          equipo_descripcion: string
+          estado?: string
+          factura_id?: string | null
+          fecha_entrada?: string
+          fecha_entrega?: string | null
+          fecha_notificacion?: string | null
+          id?: string
+          marca?: string | null
+          modelo?: string | null
+          notas?: string | null
+          problema_reportado: string
+          serial?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cliente_id?: string
+          costo_estimado?: number
+          created_at?: string
+          diagnostico?: string | null
+          equipo_descripcion?: string
+          estado?: string
+          factura_id?: string | null
+          fecha_entrada?: string
+          fecha_entrega?: string | null
+          fecha_notificacion?: string | null
+          id?: string
+          marca?: string | null
+          modelo?: string | null
+          notas?: string | null
+          problema_reportado?: string
+          serial?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ordenes_servicio_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ordenes_servicio_factura_id_fkey"
+            columns: ["factura_id"]
+            isOneToOne: false
+            referencedRelation: "facturas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       productos: {
         Row: {
           categoria_id: string | null
