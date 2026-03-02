@@ -17,6 +17,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import { generateInvoicePDF, type NegocioData } from "@/lib/generateInvoicePDF";
 import QuickClientModal from "@/components/QuickClientModal";
+import PaymentModal from "@/components/PaymentModal";
 
 interface Cliente { id: string; nombre: string; rnc_cedula: string | null; telefono: string | null; email: string | null; direccion: string | null; }
 interface Producto {
@@ -60,6 +61,7 @@ export default function POS() {
   const [quickClientOpen, setQuickClientOpen] = useState(false);
   const [productSearch, setProductSearch] = useState("");
   const [clientSearch, setClientSearch] = useState("");
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
   const [negocio, setNegocio] = useState<NegocioData | null>(null);
   const [formatoImpresion, setFormatoImpresion] = useState<"carta" | "80mm" | "58mm">("80mm");
@@ -98,7 +100,7 @@ export default function POS() {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "F2") { e.preventDefault(); searchRef.current?.focus(); }
-      if (e.key === "F9") { e.preventDefault(); handleSave(); }
+      if (e.key === "F9") { e.preventDefault(); openPaymentModal(); }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
@@ -163,10 +165,14 @@ export default function POS() {
     (c.rnc_cedula || "").includes(clientSearch)
   );
 
-  const handleSave = async () => {
+  const openPaymentModal = () => {
     if (!clienteId) { toast.error("Selecciona un cliente"); return; }
     if (lineas.length === 0) { toast.error("Agrega al menos un producto"); return; }
+    setPaymentModalOpen(true);
+  };
 
+  const handleSave = async () => {
+    setPaymentModalOpen(false);
     setSaving(true);
     try {
       // Get NCF
@@ -488,7 +494,7 @@ export default function POS() {
               <span>{lineas.reduce((s, l) => s + l.cantidad, 0)} unidad(es)</span>
             </div>
 
-            <Button onClick={handleSave} className="w-full h-12 text-base font-bold" disabled={saving}>
+            <Button onClick={openPaymentModal} className="w-full h-12 text-base font-bold" disabled={saving}>
               {saving ? <Loader2 className="mr-2 h-5 w-5 animate-spin" /> : <FileText className="mr-2 h-5 w-5" />}
               Cobrar (F9)
             </Button>
@@ -503,6 +509,17 @@ export default function POS() {
       </div>
 
       <QuickClientModal open={quickClientOpen} onOpenChange={setQuickClientOpen} onCreated={handleClientCreated} />
+      <PaymentModal
+        open={paymentModalOpen}
+        onOpenChange={setPaymentModalOpen}
+        subtotal={subtotal}
+        itbis={totalItbis}
+        descuento={desc}
+        total={total}
+        metodoPago={metodoPago}
+        onConfirm={handleSave}
+        saving={saving}
+      />
     </div>
   );
 }
