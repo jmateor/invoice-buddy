@@ -143,6 +143,15 @@ export default function OrdenesServicio() {
   };
 
   const handleUpdateEstado = async (id: string, nuevoEstado: string) => {
+    // Block delivery if no payment registered
+    if (nuevoEstado === "entregado") {
+      const orden = ordenes.find((o) => o.id === id);
+      if (orden && !orden.factura_id) {
+        toast.error("Esta orden de servicio no puede ser entregada porque no registra ningún pago de reparación.");
+        return;
+      }
+    }
+
     const updates: any = { estado: nuevoEstado };
     if (nuevoEstado === "entregado") updates.fecha_entrega = new Date().toISOString();
     if (nuevoEstado === "diagnosticado" || nuevoEstado === "listo") updates.fecha_notificacion = new Date().toISOString();
@@ -570,7 +579,15 @@ export default function OrdenesServicio() {
                         <Button size="sm" variant="secondary" onClick={() => handleUpdateEstado(selectedOrden.id, "listo")}>Marcar Listo</Button>
                       )}
                       {selectedOrden.estado === "listo" && (
-                        <Button size="sm" variant="secondary" onClick={() => handleUpdateEstado(selectedOrden.id, "entregado")}>Marcar Entregado</Button>
+                        <Button
+                          size="sm"
+                          variant={selectedOrden.factura_id ? "secondary" : "outline"}
+                          onClick={() => handleUpdateEstado(selectedOrden.id, "entregado")}
+                          title={!selectedOrden.factura_id ? "Requiere pago registrado" : ""}
+                        >
+                          Marcar Entregado
+                          {!selectedOrden.factura_id && <AlertTriangle className="ml-1 h-3 w-3 text-destructive" />}
+                        </Button>
                       )}
                       {getDiasTranscurridos(selectedOrden.fecha_entrada) >= POLITICA_DIAS && (
                         <Button size="sm" variant="destructive" onClick={() => handleUpdateEstado(selectedOrden.id, "perdido")}>Reportar Perdido</Button>
