@@ -25,6 +25,7 @@ import {
   Settings,
   Shield,
   ClipboardList,
+  Tags,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -34,6 +35,7 @@ const mainItems = [
   { title: "Órdenes de Servicio", url: "/ordenes-servicio", icon: ClipboardList },
   { title: "Clientes", url: "/clientes", icon: Users },
   { title: "Productos", url: "/productos", icon: Package },
+  { title: "Categorías", url: "/categorias", icon: Tags },
   { title: "Facturas", url: "/facturas", icon: FileText },
 ];
 
