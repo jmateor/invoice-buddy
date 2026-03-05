@@ -1,0 +1,1 @@
+ALTER TABLE public.productos ADD COLUMN codigo_barras text UNIQUE;

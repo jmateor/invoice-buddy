@@ -12,7 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Search, Package, AlertTriangle, ShieldCheck, Wrench } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Package, AlertTriangle, ShieldCheck, Wrench, Barcode, Printer } from "lucide-react";
+import BarcodePrintModal from "@/components/BarcodePrintModal";
 
 interface Producto {
   id: string;
@@ -27,7 +28,16 @@ interface Producto {
   garantia_descripcion: string | null;
   condiciones_garantia: string | null;
   tipo: string;
+  codigo_barras: string | null;
 }
+
+const generateBarcode = () => {
+  // EAN-13 style: 13-digit numeric code
+  const digits = Array.from({ length: 12 }, () => Math.floor(Math.random() * 10));
+  const sum = digits.reduce((s, d, i) => s + d * (i % 2 === 0 ? 1 : 3), 0);
+  digits.push((10 - (sum % 10)) % 10);
+  return digits.join("");
+};
 
 const emptyForm = {
   nombre: "",
@@ -40,6 +50,7 @@ const emptyForm = {
   garantia_descripcion: "",
   condiciones_garantia: "",
   tipo: "producto",
+  codigo_barras: "",
 };
 
 export default function Productos() {
@@ -49,6 +60,7 @@ export default function Productos() {
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [barcodePrint, setBarcodePrint] = useState<{ codigo: string; nombre: string; precio: number } | null>(null);
 
   const load = async () => {
     const { data } = await supabase.from("productos").select("*").order("nombre");
@@ -60,6 +72,8 @@ export default function Productos() {
   const handleSave = async () => {
     if (!form.nombre.trim()) { toast.error("El nombre es obligatorio"); return; }
     const isService = form.tipo === "servicio";
+    const codigo = form.codigo_barras?.trim() || generateBarcode();
+
     const payload = {
       nombre: form.nombre,
       descripcion: form.descripcion || null,
@@ -71,6 +85,7 @@ export default function Productos() {
       garantia_descripcion: form.garantia_descripcion?.trim() || null,
       condiciones_garantia: form.condiciones_garantia?.trim() || null,
       tipo: form.tipo,
+      codigo_barras: codigo,
     };
 
     if (editing) {
@@ -79,8 +94,17 @@ export default function Productos() {
       toast.success("Producto actualizado");
     } else {
       const { error } = await supabase.from("productos").insert({ ...payload, user_id: user!.id } as any);
-      if (error) { toast.error(error.message); return; }
+      if (error) {
+        if (error.message.includes("duplicate") || error.message.includes("unique")) {
+          toast.error("El código de barras ya existe. Intente con otro.");
+        } else {
+          toast.error(error.message);
+        }
+        return;
+      }
       toast.success("Producto creado");
+      // Offer to print barcode
+      setBarcodePrint({ codigo, nombre: form.nombre, precio: parseFloat(form.precio) || 0 });
     }
     setOpen(false); setEditing(null); setForm(emptyForm); load();
   };
@@ -97,6 +121,7 @@ export default function Productos() {
       garantia_descripcion: p.garantia_descripcion || "",
       condiciones_garantia: p.condiciones_garantia || "",
       tipo: p.tipo || "producto",
+      codigo_barras: p.codigo_barras || "",
     });
     setEditing(p.id);
     setOpen(true);
@@ -109,7 +134,10 @@ export default function Productos() {
     toast.success("Producto eliminado"); load();
   };
 
-  const filtered = productos.filter(p => p.nombre.toLowerCase().includes(search.toLowerCase()));
+  const filtered = productos.filter(p =>
+    p.nombre.toLowerCase().includes(search.toLowerCase()) ||
+    (p.codigo_barras || "").toLowerCase().includes(search.toLowerCase())
+  );
   const isService = form.tipo === "servicio";
 
   return (
@@ -132,14 +160,30 @@ export default function Productos() {
               <div className="space-y-2">
                 <Label>Tipo *</Label>
                 <Select value={form.tipo} onValueChange={v => setForm(f => ({ ...f, tipo: v }))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="producto">📦 Producto</SelectItem>
                     <SelectItem value="servicio">🔧 Servicio</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              {/* Código de barras */}
+              <div className="space-y-2">
+                <Label className="flex items-center gap-1.5">
+                  <Barcode className="h-4 w-4" /> Código de Barras
+                </Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={form.codigo_barras}
+                    onChange={e => setForm(f => ({ ...f, codigo_barras: e.target.value }))}
+                    placeholder="Se genera automáticamente si se deja vacío"
+                  />
+                  <Button type="button" variant="outline" size="sm" onClick={() => setForm(f => ({ ...f, codigo_barras: generateBarcode() }))}>
+                    Generar
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">Escanee o escriba el código. Si está vacío se generará automáticamente.</p>
               </div>
 
               <div className="space-y-2">
@@ -211,7 +255,7 @@ export default function Productos() {
 
       <div className="relative max-w-sm">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input className="pl-9" placeholder="Buscar..." value={search} onChange={e => setSearch(e.target.value)} />
+        <Input className="pl-9" placeholder="Buscar por nombre o código de barras..." value={search} onChange={e => setSearch(e.target.value)} />
       </div>
 
       <Card>
@@ -219,25 +263,29 @@ export default function Productos() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Código</TableHead>
                 <TableHead>Nombre</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead>Precio</TableHead>
                 <TableHead>Stock</TableHead>
                 <TableHead>ITBIS</TableHead>
                 <TableHead>Garantía</TableHead>
-                <TableHead className="w-24">Acciones</TableHead>
+                <TableHead className="w-28">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                     <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
                     No hay productos
                   </TableCell>
                 </TableRow>
               ) : filtered.map(p => (
                 <TableRow key={p.id}>
+                  <TableCell>
+                    <code className="text-xs bg-muted px-1.5 py-0.5 rounded font-mono">{p.codigo_barras || "—"}</code>
+                  </TableCell>
                   <TableCell className="font-medium">
                     <div className="flex items-center gap-2">
                       {p.nombre}
@@ -277,6 +325,16 @@ export default function Productos() {
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-1">
+                      {p.codigo_barras && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          title="Imprimir código de barras"
+                          onClick={() => setBarcodePrint({ codigo: p.codigo_barras!, nombre: p.nombre, precio: p.precio })}
+                        >
+                          <Printer className="h-4 w-4" />
+                        </Button>
+                      )}
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(p)}>
                         <Pencil className="h-4 w-4" />
                       </Button>
@@ -291,6 +349,16 @@ export default function Productos() {
           </Table>
         </CardContent>
       </Card>
+
+      {barcodePrint && (
+        <BarcodePrintModal
+          open={!!barcodePrint}
+          onOpenChange={(o) => { if (!o) setBarcodePrint(null); }}
+          codigo={barcodePrint.codigo}
+          nombre={barcodePrint.nombre}
+          precio={barcodePrint.precio}
+        />
+      )}
     </div>
   );
 }
