@@ -20,11 +20,12 @@ import QuickClientModal from "@/components/QuickClientModal";
 import PaymentModal from "@/components/PaymentModal";
 
 interface Cliente { id: string; nombre: string; rnc_cedula: string | null; telefono: string | null; email: string | null; direccion: string | null; }
+interface Categoria { id: string; nombre: string; }
 interface Producto {
   id: string; nombre: string; precio: number; stock: number;
   itbis_aplicable: boolean; tipo: string;
   garantia_descripcion: string | null; condiciones_garantia: string | null;
-  codigo_barras: string | null;
+  codigo_barras: string | null; categoria_id: string | null;
 }
 interface LineaFactura {
   producto_id: string;
@@ -53,6 +54,8 @@ export default function POS() {
   const location = useLocation();
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [ordenServicioId, setOrdenServicioId] = useState<string | null>(null);
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
+  const [categoriaFilter, setCategoriaFilter] = useState<string>("all");
   const [productos, setProductos] = useState<Producto[]>([]);
   const [clienteId, setClienteId] = useState("");
   const [metodoPago, setMetodoPago] = useState("efectivo");
@@ -73,14 +76,16 @@ export default function POS() {
     if (!user) return;
     Promise.all([
       supabase.from("clientes").select("id, nombre, rnc_cedula, telefono, email, direccion").order("nombre"),
-      supabase.from("productos").select("id, nombre, precio, stock, itbis_aplicable, tipo, garantia_descripcion, condiciones_garantia, codigo_barras").order("nombre"),
+      supabase.from("productos").select("id, nombre, precio, stock, itbis_aplicable, tipo, garantia_descripcion, condiciones_garantia, codigo_barras, categoria_id").order("nombre"),
+      supabase.from("categorias").select("id, nombre").order("nombre"),
       supabase.from("configuracion_negocio")
         .select("nombre_comercial, razon_social, rnc, direccion, telefono, whatsapp, email, logo_url, mensaje_factura, formato_impresion")
         .eq("user_id", user.id)
         .maybeSingle(),
-    ]).then(([c, p, neg]) => {
+    ]).then(([c, p, cat, neg]) => {
       setClientes(c.data || []);
       setProductos((p.data as any) || []);
+      setCategorias((cat.data as any) || []);
       if (neg.data) {
         const d = neg.data as any;
         setNegocio({
@@ -189,11 +194,13 @@ export default function POS() {
   const desc = parseFloat(descuento) || 0;
   const total = subtotal + totalItbis - desc;
 
-  const filteredProducts = productos.filter(p =>
-    p.nombre.toLowerCase().includes(productSearch.toLowerCase()) ||
-    p.id.toLowerCase().includes(productSearch.toLowerCase()) ||
-    (p.codigo_barras || "").toLowerCase().includes(productSearch.toLowerCase())
-  );
+  const filteredProducts = productos.filter(p => {
+    const matchesSearch = p.nombre.toLowerCase().includes(productSearch.toLowerCase()) ||
+      p.id.toLowerCase().includes(productSearch.toLowerCase()) ||
+      (p.codigo_barras || "").toLowerCase().includes(productSearch.toLowerCase());
+    const matchesCategory = categoriaFilter === "all" || p.categoria_id === categoriaFilter;
+    return matchesSearch && matchesCategory;
+  });
 
   const filteredClients = clientes.filter(c =>
     c.nombre.toLowerCase().includes(clientSearch.toLowerCase()) ||
@@ -350,6 +357,28 @@ export default function POS() {
                   }
                 }}
               />
+            </div>
+            {/* Category filter */}
+            <div className="flex gap-1 flex-wrap">
+              <Button
+                variant={categoriaFilter === "all" ? "default" : "outline"}
+                size="sm"
+                className="h-6 text-[10px] px-2"
+                onClick={() => setCategoriaFilter("all")}
+              >
+                Todas
+              </Button>
+              {categorias.map(c => (
+                <Button
+                  key={c.id}
+                  variant={categoriaFilter === c.id ? "default" : "outline"}
+                  size="sm"
+                  className="h-6 text-[10px] px-2"
+                  onClick={() => setCategoriaFilter(c.id)}
+                >
+                  {c.nombre}
+                </Button>
+              ))}
             </div>
           </div>
           <ScrollArea className="flex-1">

@@ -15,6 +15,11 @@ import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Search, Package, AlertTriangle, ShieldCheck, Wrench, Barcode, Printer } from "lucide-react";
 import BarcodePrintModal from "@/components/BarcodePrintModal";
 
+interface Categoria {
+  id: string;
+  nombre: string;
+}
+
 interface Producto {
   id: string;
   nombre: string;
@@ -51,11 +56,13 @@ const emptyForm = {
   condiciones_garantia: "",
   tipo: "producto",
   codigo_barras: "",
+  categoria_id: "",
 };
 
 export default function Productos() {
   const { user } = useAuth();
   const [productos, setProductos] = useState<Producto[]>([]);
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [search, setSearch] = useState("");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
@@ -63,14 +70,19 @@ export default function Productos() {
   const [barcodePrint, setBarcodePrint] = useState<{ codigo: string; nombre: string; precio: number } | null>(null);
 
   const load = async () => {
-    const { data } = await supabase.from("productos").select("*").order("nombre");
-    setProductos((data as any) || []);
+    const [prodRes, catRes] = await Promise.all([
+      supabase.from("productos").select("*").order("nombre"),
+      supabase.from("categorias").select("id, nombre").order("nombre"),
+    ]);
+    setProductos((prodRes.data as any) || []);
+    setCategorias((catRes.data as any) || []);
   };
 
   useEffect(() => { if (user) load(); }, [user]);
 
   const handleSave = async () => {
     if (!form.nombre.trim()) { toast.error("El nombre es obligatorio"); return; }
+    if (!form.categoria_id) { toast.error("Seleccione una categoría"); return; }
     const isService = form.tipo === "servicio";
     const codigo = form.codigo_barras?.trim() || generateBarcode();
 
@@ -86,6 +98,7 @@ export default function Productos() {
       condiciones_garantia: form.condiciones_garantia?.trim() || null,
       tipo: form.tipo,
       codigo_barras: codigo,
+      categoria_id: form.categoria_id,
     };
 
     if (editing) {
@@ -122,6 +135,7 @@ export default function Productos() {
       condiciones_garantia: p.condiciones_garantia || "",
       tipo: p.tipo || "producto",
       codigo_barras: p.codigo_barras || "",
+      categoria_id: p.categoria_id || "",
     });
     setEditing(p.id);
     setOpen(true);
@@ -166,6 +180,22 @@ export default function Productos() {
                     <SelectItem value="servicio">🔧 Servicio</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              {/* Categoría */}
+              <div className="space-y-2">
+                <Label>Categoría *</Label>
+                <Select value={form.categoria_id} onValueChange={v => setForm(f => ({ ...f, categoria_id: v }))}>
+                  <SelectTrigger><SelectValue placeholder="Seleccionar categoría" /></SelectTrigger>
+                  <SelectContent>
+                    {categorias.map(c => (
+                      <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {categorias.length === 0 && (
+                  <p className="text-xs text-destructive">No hay categorías. Cree una en el módulo de Categorías primero.</p>
+                )}
               </div>
 
               {/* Código de barras */}
@@ -265,6 +295,7 @@ export default function Productos() {
               <TableRow>
                 <TableHead>Código</TableHead>
                 <TableHead>Nombre</TableHead>
+                <TableHead>Categoría</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead>Precio</TableHead>
                 <TableHead>Stock</TableHead>
@@ -276,7 +307,7 @@ export default function Productos() {
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                     <Package className="h-8 w-8 mx-auto mb-2 opacity-50" />
                     No hay productos
                   </TableCell>
@@ -294,6 +325,11 @@ export default function Productos() {
                       )}
                     </div>
                     {p.descripcion && <p className="text-xs text-muted-foreground">{p.descripcion}</p>}
+                  </TableCell>
+                  <TableCell>
+                    <span className="text-xs text-muted-foreground">
+                      {categorias.find(c => c.id === p.categoria_id)?.nombre || "—"}
+                    </span>
                   </TableCell>
                   <TableCell>
                     {p.tipo === "servicio" ? (
