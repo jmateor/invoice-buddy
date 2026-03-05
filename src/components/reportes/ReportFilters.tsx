@@ -1,4 +1,4 @@
-import { ReportFilters as Filters, ClienteOption, ProductoOption } from "@/hooks/useReportData";
+import { ReportFilters as Filters, ClienteOption, ProductoOption, CategoriaOption } from "@/hooks/useReportData";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
@@ -11,10 +11,11 @@ interface Props {
   onChange: (f: Filters) => void;
   clientes: ClienteOption[];
   productos: ProductoOption[];
+  categorias: CategoriaOption[];
   exportData: () => Record<string, any>[];
 }
 
-export default function ReportFilters({ filters, onChange, clientes, productos, exportData }: Props) {
+export default function ReportFilters({ filters, onChange, clientes, productos, categorias, exportData }: Props) {
   const update = (partial: Partial<Filters>) => onChange({ ...filters, ...partial });
 
   const handleExport = () => {
@@ -35,6 +36,7 @@ export default function ReportFilters({ filters, onChange, clientes, productos, 
       fechaHasta: now.toISOString().split("T")[0],
       clienteId: "todos",
       productoId: "todos",
+      categoriaId: "todos",
       tipo: "todos",
       metodoPago: "todos",
       agrupacion: "diario",
@@ -85,6 +87,18 @@ export default function ReportFilters({ filters, onChange, clientes, productos, 
               <SelectItem value="todos">Todos</SelectItem>
               <SelectItem value="producto">Productos</SelectItem>
               <SelectItem value="servicio">Servicios</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Category */}
+        <div className="space-y-1">
+          <label className="text-xs text-muted-foreground">Categoría</label>
+          <Select value={filters.categoriaId} onValueChange={v => update({ categoriaId: v })}>
+            <SelectTrigger><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="todos">Todas las categorías</SelectItem>
+              {categorias.map(c => <SelectItem key={c.id} value={c.id}>{c.nombre}</SelectItem>)}
             </SelectContent>
           </Select>
         </div>

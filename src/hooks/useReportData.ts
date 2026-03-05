@@ -7,6 +7,7 @@ export interface ReportFilters {
   fechaHasta: string;
   clienteId: string;
   productoId: string;
+  categoriaId: string;
   tipo: string; // "todos" | "producto" | "servicio"
   metodoPago: string; // "todos" | "efectivo" | "tarjeta" | "transferencia"
   agrupacion: string; // "diario" | "mensual" | "anual"
@@ -16,12 +17,15 @@ export interface ReportRow {
   fecha: string;
   cliente: string;
   producto: string;
+  categoria: string;
   tipo: string;
   cantidad: number;
   precio_unitario: number;
+  costo_unitario: number;
   subtotal: number;
   itbis: number;
   total: number;
+  ganancia: number;
   metodo_pago: string;
   numero_factura: string;
 }
@@ -31,16 +35,19 @@ export interface ReportSummary {
   totalFacturas: number;
   totalProductos: number;
   totalServicios: number;
+  totalGanancia: number;
 }
 
 export interface ClienteOption { id: string; nombre: string }
 export interface ProductoOption { id: string; nombre: string; tipo: string }
+export interface CategoriaOption { id: string; nombre: string }
 
 const defaultFilters: ReportFilters = {
   fechaDesde: "",
   fechaHasta: "",
   clienteId: "todos",
   productoId: "todos",
+  categoriaId: "todos",
   tipo: "todos",
   metodoPago: "todos",
   agrupacion: "diario",
@@ -59,21 +66,24 @@ export function useReportData() {
   });
 
   const [rows, setRows] = useState<ReportRow[]>([]);
-  const [summary, setSummary] = useState<ReportSummary>({ totalVentas: 0, totalFacturas: 0, totalProductos: 0, totalServicios: 0 });
+  const [summary, setSummary] = useState<ReportSummary>({ totalVentas: 0, totalFacturas: 0, totalProductos: 0, totalServicios: 0, totalGanancia: 0 });
   const [clientes, setClientes] = useState<ClienteOption[]>([]);
   const [productos, setProductos] = useState<ProductoOption[]>([]);
+  const [categorias, setCategorias] = useState<CategoriaOption[]>([]);
   const [loading, setLoading] = useState(false);
 
   // Load filter options once
   useEffect(() => {
     if (!user) return;
     const loadOptions = async () => {
-      const [cRes, pRes] = await Promise.all([
+      const [cRes, pRes, catRes] = await Promise.all([
         supabase.from("clientes").select("id, nombre").order("nombre"),
         supabase.from("productos").select("id, nombre, tipo").order("nombre"),
+        supabase.from("categorias").select("id, nombre").order("nombre"),
       ]);
       setClientes(cRes.data || []);
       setProductos((pRes.data || []) as ProductoOption[]);
+      setCategorias((catRes.data || []) as CategoriaOption[]);
     };
     loadOptions();
   }, [user]);
@@ -105,17 +115,17 @@ export function useReportData() {
       const { data: facturas } = await facQuery;
       if (!facturas || facturas.length === 0) {
         setRows([]);
-        setSummary({ totalVentas: 0, totalFacturas: 0, totalProductos: 0, totalServicios: 0 });
+        setSummary({ totalVentas: 0, totalFacturas: 0, totalProductos: 0, totalServicios: 0, totalGanancia: 0 });
         setLoading(false);
         return;
       }
 
       const facturaIds = facturas.map(f => f.id);
-      
+
       // Fetch details in batches if needed
       let detQuery = supabase
         .from("detalle_facturas")
-        .select("cantidad, precio_unitario, subtotal, itbis, factura_id, producto_id, productos(nombre, tipo)")
+        .select("cantidad, precio_unitario, subtotal, itbis, factura_id, producto_id, productos(nombre, tipo, costo, categoria_id)")
         .in("factura_id", facturaIds);
 
       if (filters.productoId !== "todos") {
@@ -125,6 +135,7 @@ export function useReportData() {
       const { data: detalles } = await detQuery;
 
       const facturaMap = new Map(facturas.map(f => [f.id, f]));
+      const catMap = new Map((categorias || []).map(c => [c.id, c.nombre]));
       const reportRows: ReportRow[] = [];
       let totalProductos = 0;
       let totalServicios = 0;
@@ -133,20 +144,29 @@ export function useReportData() {
         const fac = facturaMap.get(d.factura_id);
         if (!fac) return;
         const prodTipo = d.productos?.tipo || "producto";
-        
+
         // Apply type filter
         if (filters.tipo !== "todos" && prodTipo !== filters.tipo) return;
+
+        const catId = d.productos?.categoria_id;
+        if (filters.categoriaId !== "todos" && catId !== filters.categoriaId) return;
+
+        const costoUnitario = Number(d.productos?.costo || 0);
+        const ganancia = (Number(d.precio_unitario) - costoUnitario) * d.cantidad;
 
         const row: ReportRow = {
           fecha: new Date(fac.created_at).toLocaleDateString("es-DO"),
           cliente: (fac as any).clientes?.nombre || "Sin cliente",
           producto: d.productos?.nombre || "Desconocido",
+          categoria: catId ? catMap.get(catId) || "Sin categoría" : "Sin categoría",
           tipo: prodTipo === "servicio" ? "Servicio" : "Producto",
           cantidad: d.cantidad,
           precio_unitario: Number(d.precio_unitario),
+          costo_unitario: costoUnitario,
           subtotal: Number(d.subtotal),
           itbis: Number(d.itbis),
           total: Number(d.subtotal) + Number(d.itbis),
+          ganancia,
           metodo_pago: fac.metodo_pago,
           numero_factura: fac.numero,
         };
@@ -159,12 +179,14 @@ export function useReportData() {
       setRows(reportRows);
 
       const totalVentas = reportRows.reduce((s, r) => s + r.total, 0);
+      const totalGanancia = reportRows.reduce((s, r) => s + r.ganancia, 0);
       const uniqueFacturas = new Set(reportRows.map(r => r.numero_factura));
       setSummary({
         totalVentas,
         totalFacturas: uniqueFacturas.size,
         totalProductos,
         totalServicios,
+        totalGanancia,
       });
     } catch (e) {
       console.error("Error loading report:", e);
@@ -203,9 +225,12 @@ export function useReportData() {
       Factura: r.numero_factura,
       Cliente: r.cliente,
       Producto: r.producto,
+      Categoría: r.categoria,
       Tipo: r.tipo,
       Cantidad: r.cantidad,
+      "Costo Unit.": r.costo_unitario,
       "Precio Unit.": r.precio_unitario,
+      Ganancia: r.ganancia,
       Subtotal: r.subtotal,
       ITBIS: r.itbis,
       Total: r.total,
@@ -220,6 +245,7 @@ export function useReportData() {
     summary,
     clientes,
     productos,
+    categorias,
     loading,
     groupedData,
     exportData,

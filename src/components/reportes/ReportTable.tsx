@@ -33,11 +33,14 @@ export default function ReportTable({ rows, loading }: Props) {
             <TableHead>Factura</TableHead>
             <TableHead>Cliente</TableHead>
             <TableHead>Producto/Servicio</TableHead>
+            <TableHead>Categoría</TableHead>
             <TableHead>Tipo</TableHead>
             <TableHead className="text-right">Cant.</TableHead>
+            <TableHead className="text-right">Costo</TableHead>
             <TableHead className="text-right">Precio</TableHead>
             <TableHead className="text-right">Subtotal</TableHead>
             <TableHead className="text-right">ITBIS</TableHead>
+            <TableHead className="text-right">Ganancia</TableHead>
             <TableHead className="text-right">Total</TableHead>
             <TableHead>Pago</TableHead>
           </TableRow>
@@ -49,15 +52,18 @@ export default function ReportTable({ rows, loading }: Props) {
               <TableCell className="text-xs font-mono">{r.numero_factura}</TableCell>
               <TableCell className="text-xs">{r.cliente}</TableCell>
               <TableCell className="text-xs">{r.producto}</TableCell>
+              <TableCell className="text-xs">{r.categoria}</TableCell>
               <TableCell>
                 <Badge variant={r.tipo === "Servicio" ? "secondary" : "outline"} className="text-xs">
                   {r.tipo}
                 </Badge>
               </TableCell>
               <TableCell className="text-right text-xs">{r.cantidad}</TableCell>
+              <TableCell className="text-right text-xs">{fmt(r.costo_unitario)}</TableCell>
               <TableCell className="text-right text-xs">{fmt(r.precio_unitario)}</TableCell>
               <TableCell className="text-right text-xs">{fmt(r.subtotal)}</TableCell>
               <TableCell className="text-right text-xs">{fmt(r.itbis)}</TableCell>
+              <TableCell className="text-right text-xs font-semibold text-emerald-600 dark:text-emerald-400">{fmt(r.ganancia)}</TableCell>
               <TableCell className="text-right text-xs font-semibold">{fmt(r.total)}</TableCell>
               <TableCell className="text-xs">{pmLabels[r.metodo_pago] || r.metodo_pago}</TableCell>
             </TableRow>

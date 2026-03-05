@@ -17,6 +17,7 @@ export default function Reportes() {
     summary,
     clientes,
     productos,
+    categorias,
     loading,
     groupedData,
     exportData,
@@ -43,13 +44,14 @@ export default function Reportes() {
             onChange={setFilters}
             clientes={clientes}
             productos={productos}
+            categorias={categorias}
             exportData={exportData}
           />
         </CardContent>
       </Card>
 
       {/* Summary cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Card className="stat-card">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Ventas</CardTitle>
@@ -73,10 +75,10 @@ export default function Reportes() {
         </Card>
         <Card className="stat-card">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Servicios</CardTitle>
-            <Wrench className="h-5 w-5 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium text-emerald-600 dark:text-emerald-400">Total Ganancia</CardTitle>
+            <TrendingUp className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
           </CardHeader>
-          <CardContent><div className="text-2xl font-bold">{summary.totalServicios}</div></CardContent>
+          <CardContent><div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">{fmt(summary.totalGanancia)}</div></CardContent>
         </Card>
       </div>
 

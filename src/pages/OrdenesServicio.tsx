@@ -452,8 +452,8 @@ export default function OrdenesServicio() {
                           <Button size="sm" variant="ghost" onClick={() => printRecibo(o)}>
                             <Printer className="h-4 w-4" />
                           </Button>
-                          {o.estado === "aprobado" && !o.factura_id && (
-                            <Button size="sm" variant="default" onClick={() => handleEnviarFacturar(o)}>
+                          {!o.factura_id && ["aprobado", "en_reparacion", "listo"].includes(o.estado) && (
+                            <Button size="sm" variant="default" onClick={() => handleEnviarFacturar(o)} title="Enviar a Facturar">
                               <Send className="h-4 w-4" />
                             </Button>
                           )}
@@ -584,14 +584,12 @@ export default function OrdenesServicio() {
                         <Button size="sm" variant="secondary" onClick={() => handleUpdateEstado(selectedOrden.id, "aprobado")}>Cliente Aprobó</Button>
                       )}
                       {selectedOrden.estado === "aprobado" && (
-                        <>
-                          <Button size="sm" variant="secondary" onClick={() => handleUpdateEstado(selectedOrden.id, "en_reparacion")}>Iniciar Reparación</Button>
-                          {!selectedOrden.factura_id && (
-                            <Button size="sm" onClick={() => { setDetailOpen(false); handleEnviarFacturar(selectedOrden); }}>
-                              <Send className="mr-1 h-3 w-3" /> Enviar a Facturar
-                            </Button>
-                          )}
-                        </>
+                        <Button size="sm" variant="secondary" onClick={() => handleUpdateEstado(selectedOrden.id, "en_reparacion")}>Iniciar Reparación</Button>
+                      )}
+                      {!selectedOrden.factura_id && ["aprobado", "en_reparacion", "listo"].includes(selectedOrden.estado) && (
+                        <Button size="sm" onClick={() => { setDetailOpen(false); handleEnviarFacturar(selectedOrden); }}>
+                          <Send className="mr-1 h-3 w-3" /> Enviar a Facturar
+                        </Button>
                       )}
                       {selectedOrden.estado === "en_reparacion" && (
                         <Button size="sm" variant="secondary" onClick={() => handleUpdateEstado(selectedOrden.id, "listo")}>Marcar Listo</Button>
