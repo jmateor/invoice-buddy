@@ -24,6 +24,7 @@ interface Producto {
   id: string; nombre: string; precio: number; stock: number;
   itbis_aplicable: boolean; tipo: string;
   garantia_descripcion: string | null; condiciones_garantia: string | null;
+  codigo_barras: string | null;
 }
 interface LineaFactura {
   producto_id: string;
@@ -72,7 +73,7 @@ export default function POS() {
     if (!user) return;
     Promise.all([
       supabase.from("clientes").select("id, nombre, rnc_cedula, telefono, email, direccion").order("nombre"),
-      supabase.from("productos").select("id, nombre, precio, stock, itbis_aplicable, tipo, garantia_descripcion, condiciones_garantia").order("nombre"),
+      supabase.from("productos").select("id, nombre, precio, stock, itbis_aplicable, tipo, garantia_descripcion, condiciones_garantia, codigo_barras").order("nombre"),
       supabase.from("configuracion_negocio")
         .select("nombre_comercial, razon_social, rnc, direccion, telefono, whatsapp, email, logo_url, mensaje_factura, formato_impresion")
         .eq("user_id", user.id)
@@ -190,7 +191,8 @@ export default function POS() {
 
   const filteredProducts = productos.filter(p =>
     p.nombre.toLowerCase().includes(productSearch.toLowerCase()) ||
-    p.id.toLowerCase().includes(productSearch.toLowerCase())
+    p.id.toLowerCase().includes(productSearch.toLowerCase()) ||
+    (p.codigo_barras || "").toLowerCase().includes(productSearch.toLowerCase())
   );
 
   const filteredClients = clientes.filter(c =>
@@ -337,8 +339,14 @@ export default function POS() {
                 value={productSearch}
                 onChange={e => setProductSearch(e.target.value)}
                 onKeyDown={e => {
-                  if (e.key === "Enter" && filteredProducts.length === 1) {
-                    addLinea(filteredProducts[0].id);
+                  if (e.key === "Enter") {
+                    // Barcode scanner match: exact codigo_barras or single result
+                    const exactMatch = productos.find(p => p.codigo_barras === productSearch.trim());
+                    if (exactMatch) {
+                      addLinea(exactMatch.id);
+                    } else if (filteredProducts.length === 1) {
+                      addLinea(filteredProducts[0].id);
+                    }
                   }
                 }}
               />

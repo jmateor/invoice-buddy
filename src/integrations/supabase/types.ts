@@ -471,6 +471,7 @@ export type Database = {
       productos: {
         Row: {
           categoria_id: string | null
+          codigo_barras: string | null
           condiciones_garantia: string | null
           costo: number
           created_at: string
@@ -488,6 +489,7 @@ export type Database = {
         }
         Insert: {
           categoria_id?: string | null
+          codigo_barras?: string | null
           condiciones_garantia?: string | null
           costo?: number
           created_at?: string
@@ -505,6 +507,7 @@ export type Database = {
         }
         Update: {
           categoria_id?: string | null
+          codigo_barras?: string | null
           condiciones_garantia?: string | null
           costo?: number
           created_at?: string
