@@ -12,8 +12,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "sonner";
-import { Shield, Users, History, Loader2, Save, ShieldCheck, ShieldAlert, UserPlus } from "lucide-react";
+import { Shield, Users, History, Loader2, Save, ShieldCheck, ShieldAlert, UserPlus, Camera } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
@@ -76,7 +77,9 @@ export default function Usuarios() {
 
   const [createModal, setCreateModal] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [newUser, setNewUser] = useState({ nombre: "", email: "", password: "", role: "cajero" as AppRole });
+  const [newUser, setNewUser] = useState({ nombre: "", email: "", password: "", role: "cajero" as AppRole, cedula: "" });
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user || !isAdmin) return;
@@ -140,6 +143,14 @@ export default function Usuarios() {
     return profiles.find(p => p.user_id === userId)?.nombre || profiles.find(p => p.user_id === userId)?.email || userId.slice(0, 8);
   };
 
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setAvatarFile(file);
+      setAvatarPreview(URL.createObjectURL(file));
+    }
+  };
+
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreating(true);
@@ -152,15 +163,39 @@ export default function Usuarios() {
     if (error) {
       toast.error(error.message);
     } else {
+      const newUserId = data.user?.id;
+
+      // Upload avatar if provided
+      let avatarUrl = "";
+      if (avatarFile && newUserId) {
+        const ext = avatarFile.name.split(".").pop();
+        const path = `${newUserId}/avatar.${ext}`;
+        const { error: uploadError } = await supabase.storage.from("avatars").upload(path, avatarFile, { upsert: true });
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
+          avatarUrl = urlData.publicUrl;
+        }
+      }
+
+      // Update profile with cedula and avatar
+      if (newUserId) {
+        await supabase.from("profiles").update({
+          cedula: newUser.cedula,
+          avatar_url: avatarUrl,
+        } as any).eq("user_id", newUserId);
+      }
+
       toast.success("Usuario creado exitosamente");
       await supabase.from("audit_logs").insert({
         user_id: user!.id,
         accion: "crear_usuario",
         entidad: "auth",
-        detalles: { email: newUser.email, rol: newUser.role },
+        detalles: { email: newUser.email, rol: newUser.role, cedula: newUser.cedula },
       } as any);
       setCreateModal(false);
-      setNewUser({ nombre: "", email: "", password: "", role: "cajero" });
+      setNewUser({ nombre: "", email: "", password: "", role: "cajero", cedula: "" });
+      setAvatarFile(null);
+      setAvatarPreview(null);
       loadData();
     }
     setCreating(false);
@@ -211,9 +246,28 @@ export default function Usuarios() {
                     <DialogDescription>Genera una nueva cuenta para otro miembro del equipo.</DialogDescription>
                   </DialogHeader>
                   <form onSubmit={handleCreateUser} className="space-y-4 py-4">
+                    <div className="flex justify-center">
+                      <label className="relative cursor-pointer group">
+                        <Avatar className="h-20 w-20 border-2 border-dashed border-muted-foreground/40 group-hover:border-primary transition-colors">
+                          {avatarPreview ? (
+                            <AvatarImage src={avatarPreview} alt="Preview" />
+                          ) : (
+                            <AvatarFallback className="bg-muted">
+                              <Camera className="h-6 w-6 text-muted-foreground" />
+                            </AvatarFallback>
+                          )}
+                        </Avatar>
+                        <input type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+                        <span className="text-[10px] text-muted-foreground block text-center mt-1">Foto</span>
+                      </label>
+                    </div>
                     <div className="space-y-2">
                       <Label>Nombre Completo</Label>
                       <Input value={newUser.nombre} onChange={e => setNewUser({ ...newUser, nombre: e.target.value })} required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Cédula</Label>
+                      <Input value={newUser.cedula} onChange={e => setNewUser({ ...newUser, cedula: e.target.value })} placeholder="000-0000000-0" required />
                     </div>
                     <div className="space-y-2">
                       <Label>Correo Electrónico</Label>
@@ -236,7 +290,7 @@ export default function Usuarios() {
                     </div>
                     <DialogFooter>
                       <Button variant="outline" type="button" onClick={() => setCreateModal(false)}>Cancelar</Button>
-                      <Button type="submit" disabled={creating}>{creating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null} Creed Cuenta</Button>
+                      <Button type="submit" disabled={creating}>{creating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null} Crear Cuenta</Button>
                     </DialogFooter>
                   </form>
                 </DialogContent>
