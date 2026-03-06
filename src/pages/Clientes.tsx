@@ -8,7 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Search, Users } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Users, Mail, MessageCircle, Download } from "lucide-react";
+import * as XLSX from "xlsx";
 
 interface Cliente {
   id: string;
@@ -38,15 +39,29 @@ export default function Clientes() {
 
   const handleSave = async () => {
     if (!form.nombre.trim()) { toast.error("El nombre es obligatorio"); return; }
-    
+
     if (editing) {
       const { error } = await supabase.from("clientes").update(form).eq("id", editing);
       if (error) { toast.error(error.message); return; }
       toast.success("Cliente actualizado");
+      await supabase.from("audit_logs").insert({
+        user_id: user!.id,
+        accion: "actualizar_cliente",
+        entidad: "clientes",
+        entidad_id: editing,
+        detalles: { form }
+      } as any);
     } else {
-      const { error } = await supabase.from("clientes").insert({ ...form, user_id: user!.id });
+      const { data, error } = await supabase.from("clientes").insert({ ...form, user_id: user!.id }).select("id").single();
       if (error) { toast.error(error.message); return; }
       toast.success("Cliente creado");
+      await supabase.from("audit_logs").insert({
+        user_id: user!.id,
+        accion: "crear_cliente",
+        entidad: "clientes",
+        entidad_id: data.id,
+        detalles: { form }
+      } as any);
     }
     setOpen(false);
     setEditing(null);
@@ -65,7 +80,29 @@ export default function Clientes() {
     const { error } = await supabase.from("clientes").delete().eq("id", id);
     if (error) { toast.error(error.message); return; }
     toast.success("Cliente eliminado");
+    await supabase.from("audit_logs").insert({
+      user_id: user!.id,
+      accion: "eliminar_cliente",
+      entidad: "clientes",
+      entidad_id: id,
+      detalles: { cliente_id: id }
+    } as any);
     load();
+  };
+
+  const handleExportExcel = () => {
+    const dataToExport = clientes.map(c => ({
+      Nombre: c.nombre,
+      "RNC/Cédula": c.rnc_cedula || "",
+      Teléfono: c.telefono || "",
+      Email: c.email || "",
+      Dirección: c.direccion || ""
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Clientes");
+    XLSX.writeFile(workbook, "clientes.xlsx");
   };
 
   const filtered = clientes.filter(c =>
@@ -80,41 +117,47 @@ export default function Clientes() {
           <h1 className="text-2xl font-bold text-foreground">Clientes</h1>
           <p className="text-muted-foreground">{clientes.length} clientes registrados</p>
         </div>
-        <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) { setEditing(null); setForm(emptyCliente); } }}>
-          <DialogTrigger asChild>
-            <Button><Plus className="mr-2 h-4 w-4" />Nuevo Cliente</Button>
-          </DialogTrigger>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{editing ? "Editar Cliente" : "Nuevo Cliente"}</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label>Nombre *</Label>
-                <Input value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={handleExportExcel}>
+            <Download className="mr-2 h-4 w-4" />
+            Exportar Excel
+          </Button>
+          <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) { setEditing(null); setForm(emptyCliente); } }}>
+            <DialogTrigger asChild>
+              <Button><Plus className="mr-2 h-4 w-4" />Nuevo Cliente</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>{editing ? "Editar Cliente" : "Nuevo Cliente"}</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label>RNC / Cédula</Label>
-                  <Input value={form.rnc_cedula} onChange={e => setForm(f => ({ ...f, rnc_cedula: e.target.value }))} />
+                  <Label>Nombre *</Label>
+                  <Input value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>RNC / Cédula</Label>
+                    <Input value={form.rnc_cedula} onChange={e => setForm(f => ({ ...f, rnc_cedula: e.target.value }))} />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Teléfono</Label>
+                    <Input value={form.telefono} onChange={e => setForm(f => ({ ...f, telefono: e.target.value }))} />
+                  </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Teléfono</Label>
-                  <Input value={form.telefono} onChange={e => setForm(f => ({ ...f, telefono: e.target.value }))} />
+                  <Label>Email</Label>
+                  <Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
                 </div>
+                <div className="space-y-2">
+                  <Label>Dirección</Label>
+                  <Input value={form.direccion} onChange={e => setForm(f => ({ ...f, direccion: e.target.value }))} />
+                </div>
+                <Button onClick={handleSave} className="w-full">{editing ? "Actualizar" : "Crear"} Cliente</Button>
               </div>
-              <div className="space-y-2">
-                <Label>Email</Label>
-                <Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
-              </div>
-              <div className="space-y-2">
-                <Label>Dirección</Label>
-                <Input value={form.direccion} onChange={e => setForm(f => ({ ...f, direccion: e.target.value }))} />
-              </div>
-              <Button onClick={handleSave} className="w-full">{editing ? "Actualizar" : "Crear"} Cliente</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
 
       <div className="relative max-w-sm">
@@ -150,10 +193,20 @@ export default function Clientes() {
                   <TableCell>{c.email || "—"}</TableCell>
                   <TableCell>
                     <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => handleEdit(c)}>
+                      {c.telefono && (
+                        <Button variant="ghost" size="icon" onClick={() => window.open(`https://wa.me/${c.telefono!.replace(/\\D/g, '')}`, '_blank')} title="Enviar WhatsApp">
+                          <MessageCircle className="h-4 w-4 text-green-600" />
+                        </Button>
+                      )}
+                      {c.email && (
+                        <Button variant="ghost" size="icon" onClick={() => window.open(`mailto:${c.email}`, '_blank')} title="Enviar Correo">
+                          <Mail className="h-4 w-4 text-blue-600" />
+                        </Button>
+                      )}
+                      <Button variant="ghost" size="icon" onClick={() => handleEdit(c)} title="Editar">
                         <Pencil className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => handleDelete(c.id)}>
+                      <Button variant="ghost" size="icon" onClick={() => handleDelete(c.id)} title="Eliminar">
                         <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     </div>

@@ -106,6 +106,14 @@ export default function Compras() {
         }
       }
 
+      await supabase.from("audit_logs").insert({
+        user_id: user!.id,
+        accion: "registrar_compra",
+        entidad: "compras",
+        entidad_id: compra.id,
+        detalles: { proveedor_id: proveedorId, total, notas, lineas }
+      } as any);
+
       toast.success("Compra registrada e inventario actualizado");
       setOpen(false);
       setProveedorId("");

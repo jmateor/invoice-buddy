@@ -19,6 +19,7 @@ import Compras from "./pages/Compras";
 import Usuarios from "./pages/Usuarios";
 import OrdenesServicio from "./pages/OrdenesServicio";
 import Categorias from "./pages/Categorias";
+import Auditoria from "./pages/Auditoria";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -59,6 +60,7 @@ const App = () => (
             <Route path="/usuarios" element={<ProtectedRoute><Usuarios /></ProtectedRoute>} />
             <Route path="/ordenes-servicio" element={<ProtectedRoute><OrdenesServicio /></ProtectedRoute>} />
             <Route path="/categorias" element={<ProtectedRoute><Categorias /></ProtectedRoute>} />
+            <Route path="/auditoria" element={<ProtectedRoute><Auditoria /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

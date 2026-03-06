@@ -1,6 +1,7 @@
 import { useLocation } from "react-router-dom";
 import { NavLink } from "@/components/NavLink";
 import { useAuth } from "@/contexts/AuthContext";
+import { usePermissions } from "@/hooks/usePermissions";
 import {
   Sidebar,
   SidebarContent,
@@ -45,11 +46,23 @@ const secondaryItems = [
   { title: "Reportes", url: "/reportes", icon: BarChart3 },
   { title: "Usuarios y Roles", url: "/usuarios", icon: Shield },
   { title: "Configuraciones", url: "/configuraciones", icon: Settings },
+  { title: "Auditoría", url: "/auditoria", icon: Shield },
 ];
 
 export function AppSidebar() {
   const location = useLocation();
   const { signOut, user } = useAuth();
+  const { isAdmin, isCajero, isContador, canConfiguracion, canGestionUsuarios, canExportar } = usePermissions();
+
+  const filteredSecondary = secondaryItems.filter(item => {
+    if (item.title === "Usuarios y Roles" && !canGestionUsuarios) return false;
+    if (item.title === "Configuraciones" && !canConfiguracion) return false;
+    if (item.title === "Auditoría" && !isAdmin) return false;
+    if (item.title === "Proveedores" && isCajero) return false;
+    if (item.title === "Reportes" && !canExportar) return false;
+    if (item.title === "Compras" && isCajero) return false;
+    return true;
+  });
 
   return (
     <Sidebar>
@@ -92,7 +105,7 @@ export function AppSidebar() {
           <SidebarGroupLabel>Gestión</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {secondaryItems.map((item) => (
+              {filteredSecondary.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton asChild>
                     <NavLink

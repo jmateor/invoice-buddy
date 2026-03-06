@@ -80,7 +80,6 @@ export default function POS() {
       supabase.from("categorias").select("id, nombre").order("nombre"),
       supabase.from("configuracion_negocio")
         .select("nombre_comercial, razon_social, rnc, direccion, telefono, whatsapp, email, logo_url, mensaje_factura, formato_impresion")
-        .eq("user_id", user.id)
         .maybeSingle(),
     ]).then(([c, p, cat, neg]) => {
       setClientes(c.data || []);
@@ -145,12 +144,23 @@ export default function POS() {
     return () => window.removeEventListener("keydown", handler);
   }, [lineas, clienteId]);
 
+  const getPosConfig = () => {
+    try {
+      const saved = localStorage.getItem("posConfig");
+      return saved ? JSON.parse(saved) : { bloquear_sin_stock: false };
+    } catch {
+      return { bloquear_sin_stock: false };
+    }
+  };
+
   const addLinea = useCallback((productoId: string) => {
     const prod = productos.find(p => p.id === productoId);
     if (!prod) return;
 
+    const config = getPosConfig();
+
     // Block if product (not service) and no stock
-    if (prod.tipo !== "servicio" && prod.stock <= 0) {
+    if (prod.tipo !== "servicio" && prod.stock <= 0 && config.bloquear_sin_stock) {
       toast.error(`Sin stock disponible para "${prod.nombre}"`);
       return;
     }
@@ -158,6 +168,10 @@ export default function POS() {
     setLineas(prev => {
       const existing = prev.find(l => l.producto_id === productoId);
       if (existing) {
+        if (prod.tipo !== "servicio" && existing.cantidad + 1 > prod.stock && config.bloquear_sin_stock) {
+          toast.error(`Stock insuficiente para "${prod.nombre}". Disponible: ${prod.stock}`);
+          return prev;
+        }
         return prev.map(l => {
           if (l.producto_id !== productoId) return l;
           const newCant = l.cantidad + 1;
@@ -179,12 +193,25 @@ export default function POS() {
 
   const updateCantidad = (idx: number, cant: number) => {
     if (cant < 1) return;
-    setLineas(lineas.map((l, i) => {
-      if (i !== idx) return l;
-      const prod = productos.find(p => p.id === l.producto_id);
-      const itbisUnit = prod?.itbis_aplicable ? l.precio_unitario * ITBIS_RATE : 0;
-      return { ...l, cantidad: cant, itbis: itbisUnit * cant, subtotal: (l.precio_unitario + itbisUnit) * cant };
-    }));
+    const config = getPosConfig();
+
+    setLineas(prevLineas => {
+      // First, get the line we're modifying to check stock
+      const targetLine = prevLineas[idx];
+      if (!targetLine) return prevLineas;
+
+      const prod = productos.find(p => p.id === targetLine.producto_id);
+      if (prod && prod.tipo !== "servicio" && cant > prod.stock && config.bloquear_sin_stock) {
+        toast.error(`Stock insuficiente para "${prod.nombre}". Disponible: ${prod.stock}`);
+        return prevLineas;
+      }
+
+      return prevLineas.map((l, i) => {
+        if (i !== idx) return l;
+        const itbisUnit = prod?.itbis_aplicable ? l.precio_unitario * ITBIS_RATE : 0;
+        return { ...l, cantidad: cant, itbis: itbisUnit * cant, subtotal: (l.precio_unitario + itbisUnit) * cant };
+      });
+    });
   };
 
   const removeLinea = (idx: number) => setLineas(lineas.filter((_, i) => i !== idx));
@@ -253,6 +280,14 @@ export default function POS() {
           await supabase.rpc("decrement_stock" as any, { p_id: l.producto_id, amount: l.cantidad });
         }
       }
+
+      await supabase.from("audit_logs").insert({
+        user_id: user!.id,
+        accion: "crear_factura_pos",
+        entidad: "facturas",
+        entidad_id: factura.id,
+        detalles: { numero, total, cliente_id: clienteId, subtotal, metodopago: metodoPago, ncf }
+      } as any);
 
       // Link factura to orden de servicio if applicable
       if (ordenServicioId) {

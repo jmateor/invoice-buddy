@@ -2,13 +2,14 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 
-export type AppRole = "admin" | "cajero" | "contador";
+export type AppRole = "admin" | "cajero" | "contador" | "supervisor";
 
 interface Permissions {
   role: AppRole | null;
   isAdmin: boolean;
   isCajero: boolean;
   isContador: boolean;
+  isSupervisor: boolean;
   loading: boolean;
   canAnular: boolean;
   canEliminar: boolean;
@@ -40,18 +41,20 @@ export function usePermissions(): Permissions {
   const isAdmin = role === "admin";
   const isCajero = role === "cajero";
   const isContador = role === "contador";
+  const isSupervisor = role === "supervisor";
 
   return {
     role,
     isAdmin,
     isCajero,
     isContador,
+    isSupervisor,
     loading,
-    canAnular: isAdmin,
+    canAnular: isAdmin || isSupervisor,
     canEliminar: isAdmin,
-    canEditarPrecios: isAdmin,
-    canAplicarDescuentos: isAdmin || isContador,
-    canExportar: isAdmin || isContador,
+    canEditarPrecios: isAdmin || isSupervisor,
+    canAplicarDescuentos: isAdmin || isContador || isSupervisor,
+    canExportar: isAdmin || isContador || isSupervisor,
     canConfiguracion: isAdmin,
     canGestionUsuarios: isAdmin,
   };

@@ -61,7 +61,6 @@ export default function NuevaFactura() {
       supabase.from("productos").select("id, nombre, precio, stock, itbis_aplicable, garantia_descripcion, condiciones_garantia, tipo").order("nombre"),
       supabase.from("configuracion_negocio")
         .select("nombre_comercial, razon_social, rnc, direccion, telefono, whatsapp, email, logo_url, mensaje_factura, formato_impresion")
-        .eq("user_id", user.id)
         .maybeSingle(),
     ]).then(([c, p, neg]) => {
       setClientes(c.data || []);
@@ -161,6 +160,14 @@ export default function NuevaFactura() {
         }
       }
 
+      await supabase.from("audit_logs").insert({
+        user_id: user!.id,
+        accion: "crear_factura",
+        entidad: "facturas",
+        entidad_id: factura.id,
+        detalles: { numero, total, cliente_id: clienteId, subtotal, metodopago: metodoPago }
+      } as any);
+
       // Generate PDF with business data
       const cliente = clientes.find(c => c.id === clienteId);
       generateInvoicePDF({
@@ -254,8 +261,8 @@ export default function NuevaFactura() {
               </div>
               <p className="text-xs text-muted-foreground">
                 {formatoImpresion === "carta" ? "Tamaño A4 – ideal para impresoras de oficina" :
-                 formatoImpresion === "80mm" ? "Térmica 80mm – impresora de punto de venta" :
-                 "Térmica 58mm – impresora compacta"}
+                  formatoImpresion === "80mm" ? "Térmica 80mm – impresora de punto de venta" :
+                    "Térmica 58mm – impresora compacta"}
               </p>
             </div>
             <div className="space-y-2">

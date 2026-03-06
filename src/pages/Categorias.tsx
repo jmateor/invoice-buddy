@@ -41,10 +41,24 @@ export default function Categorias() {
       const { error } = await supabase.from("categorias").update({ nombre, descripcion: descripcion || null } as any).eq("id", editing);
       if (error) { toast.error(error.message); return; }
       toast.success("Categoría actualizada");
+      await supabase.from("audit_logs").insert({
+        user_id: user!.id,
+        accion: "actualizar_categoria",
+        entidad: "categorias",
+        entidad_id: editing,
+        detalles: { nombre, descripcion }
+      } as any);
     } else {
-      const { error } = await supabase.from("categorias").insert({ nombre, descripcion: descripcion || null, user_id: user!.id } as any);
+      const { data, error } = await supabase.from("categorias").insert({ nombre, descripcion: descripcion || null, user_id: user!.id } as any).select("id").single();
       if (error) { toast.error(error.message); return; }
       toast.success("Categoría creada");
+      await supabase.from("audit_logs").insert({
+        user_id: user!.id,
+        accion: "crear_categoria",
+        entidad: "categorias",
+        entidad_id: data.id,
+        detalles: { nombre, descripcion }
+      } as any);
     }
     setOpen(false); resetForm(); load();
   };
@@ -60,7 +74,15 @@ export default function Categorias() {
     if (!confirm("¿Eliminar esta categoría? Los productos asociados quedarán sin categoría.")) return;
     const { error } = await supabase.from("categorias").delete().eq("id", id);
     if (error) { toast.error(error.message); return; }
-    toast.success("Categoría eliminada"); load();
+    toast.success("Categoría eliminada");
+    await supabase.from("audit_logs").insert({
+      user_id: user!.id,
+      accion: "eliminar_categoria",
+      entidad: "categorias",
+      entidad_id: id,
+      detalles: { categoria_id: id }
+    } as any);
+    load();
   };
 
   const filtered = categorias.filter(c =>

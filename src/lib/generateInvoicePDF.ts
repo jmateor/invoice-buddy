@@ -42,7 +42,7 @@ const metodoPagoLabel: Record<string, string> = {
 const fmt = (n: number) => `RD$ ${n.toLocaleString("es-DO", { minimumFractionDigits: 2 })}`;
 
 // ─── CARTA / A4 ─────────────────────────────────────────────────────────
-function generateCartaPDF(data: InvoiceData, action: "download" | "print") {
+function generateCartaPDF(data: InvoiceData, action: "download" | "print" | "blob") {
   const doc = new jsPDF({ unit: "mm", format: "a4" });
   const pageWidth = doc.internal.pageSize.getWidth();
   const neg = data.negocio;
@@ -189,11 +189,12 @@ function generateCartaPDF(data: InvoiceData, action: "download" | "print") {
   doc.text("Documento generado electrónicamente", pageWidth / 2, pageH - 6, { align: "center" });
 
   if (action === "print") { doc.autoPrint(); window.open(doc.output("bloburl"), "_blank"); }
+  else if (action === "blob") { return doc.output("blob"); }
   else { doc.save(`${data.numero}.pdf`); }
 }
 
 // ─── THERMAL ────────────────────────────────────────────────────────────
-function generateThermalPDF(data: InvoiceData, action: "download" | "print", widthMM: number) {
+function generateThermalPDF(data: InvoiceData, action: "download" | "print" | "blob", widthMM: number) {
   const contentH = 350;
   const doc = new jsPDF({ unit: "mm", format: [widthMM, contentH] });
   const pw = widthMM;
@@ -298,17 +299,18 @@ function generateThermalPDF(data: InvoiceData, action: "download" | "print", wid
   doc.text("Generado electrónicamente", pw / 2, y + 2, { align: "center" });
 
   if (action === "print") { doc.autoPrint(); window.open(doc.output("bloburl"), "_blank"); }
+  else if (action === "blob") { return doc.output("blob"); }
   else { doc.save(`${data.numero}.pdf`); }
 }
 
 // ─── PUBLIC ENTRY POINT ────────────────────────────────────────────────
-export function generateInvoicePDF(data: InvoiceData, action: "download" | "print" = "download") {
+export function generateInvoicePDF(data: InvoiceData, action: "download" | "print" | "blob" = "download") {
   const formato = data.formato || "carta";
   if (formato === "58mm") {
-    generateThermalPDF(data, action, 58);
+    return generateThermalPDF(data, action, 58);
   } else if (formato === "80mm") {
-    generateThermalPDF(data, action, 80);
+    return generateThermalPDF(data, action, 80);
   } else {
-    generateCartaPDF(data, action);
+    return generateCartaPDF(data, action);
   }
 }

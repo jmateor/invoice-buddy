@@ -105,8 +105,15 @@ export default function Productos() {
       const { error } = await supabase.from("productos").update(payload as any).eq("id", editing);
       if (error) { toast.error(error.message); return; }
       toast.success("Producto actualizado");
+      await supabase.from("audit_logs").insert({
+        user_id: user!.id,
+        accion: "actualizar_producto",
+        entidad: "productos",
+        entidad_id: editing,
+        detalles: { payload }
+      } as any);
     } else {
-      const { error } = await supabase.from("productos").insert({ ...payload, user_id: user!.id } as any);
+      const { data, error } = await supabase.from("productos").insert({ ...payload, user_id: user!.id } as any).select("id").single();
       if (error) {
         if (error.message.includes("duplicate") || error.message.includes("unique")) {
           toast.error("El código de barras ya existe. Intente con otro.");
@@ -116,6 +123,13 @@ export default function Productos() {
         return;
       }
       toast.success("Producto creado");
+      await supabase.from("audit_logs").insert({
+        user_id: user!.id,
+        accion: "crear_producto",
+        entidad: "productos",
+        entidad_id: data.id,
+        detalles: { payload }
+      } as any);
       // Offer to print barcode
       setBarcodePrint({ codigo, nombre: form.nombre, precio: parseFloat(form.precio) || 0 });
     }
@@ -145,7 +159,15 @@ export default function Productos() {
     if (!confirm("¿Eliminar este producto?")) return;
     const { error } = await supabase.from("productos").delete().eq("id", id);
     if (error) { toast.error(error.message); return; }
-    toast.success("Producto eliminado"); load();
+    toast.success("Producto eliminado");
+    await supabase.from("audit_logs").insert({
+      user_id: user!.id,
+      accion: "eliminar_producto",
+      entidad: "productos",
+      entidad_id: id,
+      detalles: { producto_id: id }
+    } as any);
+    load();
   };
 
   const filtered = productos.filter(p =>

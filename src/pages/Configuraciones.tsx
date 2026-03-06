@@ -60,16 +60,24 @@ export default function Configuraciones() {
   const [loading, setLoading] = useState(true);
 
   // POS config state
-  const [posConfig, setPosConfig] = useState({
-    confirmacion_cobro: true,
-    sonido_escaner: false,
-    modo_rapido: false,
-    pantalla_completa: false,
-    bloqueo_precios: true,
-    descuentos_activos: true,
-    bloquear_sin_stock: false,
-    stock_negativo: false,
+  const [posConfig, setPosConfig] = useState(() => {
+    const saved = localStorage.getItem("posConfig");
+    if (saved) return JSON.parse(saved);
+    return {
+      confirmacion_cobro: true,
+      sonido_escaner: false,
+      modo_rapido: false,
+      pantalla_completa: false,
+      bloqueo_precios: true,
+      descuentos_activos: true,
+      bloquear_sin_stock: false,
+      stock_negativo: false,
+    };
   });
+
+  useEffect(() => {
+    localStorage.setItem("posConfig", JSON.stringify(posConfig));
+  }, [posConfig]);
 
   // Print config state
   // printConfig removed – now stored in main config.formato_impresion
@@ -82,7 +90,7 @@ export default function Configuraciones() {
   const loadData = async () => {
     setLoading(true);
     const [configRes, ncfRes] = await Promise.all([
-      supabase.from("configuracion_negocio").select("*").eq("user_id", user!.id).maybeSingle(),
+      supabase.from("configuracion_negocio").select("*").limit(1).maybeSingle(),
       supabase.from("ncf_secuencias").select("*").order("tipo_comprobante"),
     ]);
 
@@ -111,10 +119,16 @@ export default function Configuraciones() {
 
   const handleSaveConfig = async () => {
     setSaving(true);
-    const { error } = await supabase.from("configuracion_negocio").upsert({
-      user_id: user!.id,
-      ...config,
-    } as any, { onConflict: "user_id" });
+    // Para entornos unificados, si ya existe configuración para alguien más pero queremos sobreescribirla o crearla
+    const { data: existing } = await supabase.from("configuracion_negocio").select("id, user_id").limit(1).maybeSingle();
+    let error;
+    if (existing) {
+      const { error: updErr } = await supabase.from("configuracion_negocio").update({ ...config } as any).eq("id", existing.id);
+      error = updErr;
+    } else {
+      const { error: insErr } = await supabase.from("configuracion_negocio").insert({ user_id: user!.id, ...config } as any);
+      error = insErr;
+    }
 
     if (error) toast.error(error.message);
     else {
@@ -320,11 +334,10 @@ export default function Configuraciones() {
                       key={opt.key}
                       type="button"
                       onClick={() => updateField("formato_impresion", opt.key)}
-                      className={`flex flex-col items-start p-3 rounded-lg border-2 text-left transition-all ${
-                        config.formato_impresion === opt.key
-                          ? "border-primary bg-primary/5"
-                          : "border-border hover:border-muted-foreground"
-                      }`}
+                      className={`flex flex-col items-start p-3 rounded-lg border-2 text-left transition-all ${config.formato_impresion === opt.key
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-muted-foreground"
+                        }`}
                     >
                       <span className="font-semibold text-sm text-foreground">{opt.label}</span>
                       <span className="text-xs text-muted-foreground mt-1">{opt.desc}</span>

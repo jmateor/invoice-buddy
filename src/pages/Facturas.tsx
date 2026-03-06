@@ -42,7 +42,6 @@ export default function Facturas() {
       supabase
         .from("configuracion_negocio")
         .select("nombre_comercial, razon_social, rnc, direccion, telefono, whatsapp, email, logo_url, mensaje_factura, formato_impresion")
-        .eq("user_id", user!.id)
         .maybeSingle(),
     ]);
     setFacturas((facRes.data as any) || []);
@@ -70,16 +69,23 @@ export default function Facturas() {
     const { error } = await supabase.from("facturas").update({ estado: "anulada" as any }).eq("id", id);
     if (error) { toast.error(error.message); return; }
     toast.success("Factura anulada");
+    await supabase.from("audit_logs").insert({
+      user_id: user!.id,
+      accion: "anular_factura",
+      entidad: "facturas",
+      entidad_id: id,
+      detalles: { factura_id: id }
+    } as any);
     load();
   };
 
-  const handlePDF = async (f: Factura, action: "download" | "print") => {
+  const handlePDF = async (f: Factura, action: "download" | "print" | "share") => {
     const { data: detalles } = await supabase
       .from("detalle_facturas")
       .select("cantidad, precio_unitario, itbis, subtotal, productos(nombre, garantia_descripcion, condiciones_garantia)")
       .eq("factura_id", f.id);
 
-    generateInvoicePDF({
+    const invoiceData = {
       numero: f.numero,
       fecha: f.fecha,
       cliente: {
@@ -105,8 +111,35 @@ export default function Facturas() {
       metodo_pago: f.metodo_pago,
       notas: f.notas,
       negocio: negocio || undefined,
-      formato: formatoImpresion,
-    }, action);
+      formato: action === "share" ? ("80mm" as const) : formatoImpresion,
+    };
+
+    if (action === "share") {
+      try {
+        const pdfBlob = generateInvoicePDF(invoiceData, "blob") as Blob | undefined;
+        if (!pdfBlob) throw new Error("No se pudo generar el PDF");
+
+        const file = new File([pdfBlob], `Factura_${f.numero}.pdf`, { type: "application/pdf" });
+        const msg = `Hola ${f.clientes?.nombre || ""}, adjunto su factura ${f.numero} por RD$ ${Number(f.total).toLocaleString("es-DO", { minimumFractionDigits: 2 })}. ¡Gracias!`;
+
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file], title: `Factura ${f.numero}`, text: msg });
+        } else {
+          toast.error("Tu navegador no soporta compartir archivo directamente. Se descargará el PDF y luego puedes adjuntarlo.");
+          generateInvoicePDF(invoiceData, "download");
+          const phone = (f.clientes?.telefono || "").replace(/\D/g, "");
+          if (phone) {
+            const waMsg = encodeURIComponent(msg);
+            window.open(`https://wa.me/${phone}?text=${waMsg}`, "_blank");
+          }
+        }
+      } catch (err) {
+        console.error(err);
+        toast.error("No se pudo compartir el archivo");
+      }
+    } else {
+      generateInvoicePDF(invoiceData, action);
+    }
   };
 
   const handleExport = () => {
@@ -211,11 +244,7 @@ export default function Facturas() {
                         <Printer className="h-4 w-4" />
                       </Button>
                       {f.clientes?.telefono && (
-                        <Button variant="ghost" size="icon" title="WhatsApp" onClick={() => {
-                          const phone = (f.clientes?.telefono || "").replace(/\D/g, "");
-                          const msg = encodeURIComponent(`Hola ${f.clientes?.nombre}, adjunto su factura ${f.numero} por RD$ ${Number(f.total).toLocaleString("es-DO", { minimumFractionDigits: 2 })}. ¡Gracias!`);
-                          window.open(`https://wa.me/${phone}?text=${msg}`, "_blank");
-                        }}>
+                        <Button variant="ghost" size="icon" title="Compartir WhatsApp/Email" onClick={() => handlePDF(f, "share")}>
                           <MessageCircle className="h-4 w-4 text-accent" />
                         </Button>
                       )}

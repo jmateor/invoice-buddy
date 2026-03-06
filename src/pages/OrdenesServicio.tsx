@@ -99,9 +99,8 @@ export default function OrdenesServicio() {
       supabase
         .from("ordenes_servicio")
         .select("*, clientes(id, nombre, telefono, email)")
-        .eq("user_id", user.id)
         .order("created_at", { ascending: false }),
-      supabase.from("clientes").select("id, nombre, telefono, email").eq("user_id", user.id).order("nombre"),
+      supabase.from("clientes").select("id, nombre, telefono, email").order("nombre"),
     ]);
     setOrdenes((ords as any[]) ?? []);
     setClientes((clis as any[]) ?? []);
@@ -120,7 +119,7 @@ export default function OrdenesServicio() {
       toast.error("Complete los campos requeridos: cliente, equipo y problema");
       return;
     }
-    const { error } = await supabase.from("ordenes_servicio").insert({
+    const { data, error } = await supabase.from("ordenes_servicio").insert({
       user_id: user.id,
       cliente_id: form.cliente_id,
       equipo_descripcion: form.equipo_descripcion,
@@ -131,12 +130,19 @@ export default function OrdenesServicio() {
       diagnostico: form.diagnostico,
       costo_estimado: form.costo_estimado,
       notas: form.notas,
-    });
+    }).select("id").single();
     if (error) {
       toast.error("Error al crear orden");
       return;
     }
     toast.success("Orden de servicio creada");
+    await supabase.from("audit_logs").insert({
+      user_id: user.id,
+      accion: "crear_orden_servicio",
+      entidad: "ordenes_servicio",
+      entidad_id: data.id,
+      detalles: { form }
+    } as any);
     setModalOpen(false);
     resetForm();
     fetchData();
@@ -162,6 +168,13 @@ export default function OrdenesServicio() {
       return;
     }
     toast.success(`Estado actualizado a: ${ESTADOS.find((e) => e.value === nuevoEstado)?.label}`);
+    await supabase.from("audit_logs").insert({
+      user_id: user!.id,
+      accion: "actualizar_estado_orden",
+      entidad: "ordenes_servicio",
+      entidad_id: id,
+      detalles: { nuevoEstado }
+    } as any);
     fetchData();
     if (selectedOrden?.id === id) setSelectedOrden((prev) => (prev ? { ...prev, ...updates } : prev));
   };
@@ -177,6 +190,13 @@ export default function OrdenesServicio() {
       return;
     }
     toast.success("Diagnóstico actualizado");
+    await supabase.from("audit_logs").insert({
+      user_id: user!.id,
+      accion: "actualizar_diagnostico_orden",
+      entidad: "ordenes_servicio",
+      entidad_id: selectedOrden.id,
+      detalles: { diagnostico: form.diagnostico, costo: form.costo_estimado }
+    } as any);
     setEditMode(false);
     fetchData();
   };

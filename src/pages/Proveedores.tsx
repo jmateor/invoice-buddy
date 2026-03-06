@@ -44,10 +44,24 @@ export default function Proveedores() {
       const { error } = await supabase.from("proveedores").update(payload).eq("id", editing);
       if (error) { toast.error(error.message); return; }
       toast.success("Proveedor actualizado");
+      await supabase.from("audit_logs").insert({
+        user_id: user!.id,
+        accion: "actualizar_proveedor",
+        entidad: "proveedores",
+        entidad_id: editing,
+        detalles: { payload }
+      } as any);
     } else {
-      const { error } = await supabase.from("proveedores").insert({ ...payload, user_id: user!.id });
+      const { data, error } = await supabase.from("proveedores").insert({ ...payload, user_id: user!.id }).select("id").single();
       if (error) { toast.error(error.message); return; }
       toast.success("Proveedor creado");
+      await supabase.from("audit_logs").insert({
+        user_id: user!.id,
+        accion: "crear_proveedor",
+        entidad: "proveedores",
+        entidad_id: data.id,
+        detalles: { payload }
+      } as any);
     }
     setOpen(false); setEditing(null); setForm(emptyForm); load();
   };
@@ -62,7 +76,15 @@ export default function Proveedores() {
     if (!confirm("¿Eliminar este proveedor?")) return;
     const { error } = await supabase.from("proveedores").delete().eq("id", id);
     if (error) { toast.error(error.message); return; }
-    toast.success("Proveedor eliminado"); load();
+    toast.success("Proveedor eliminado");
+    await supabase.from("audit_logs").insert({
+      user_id: user!.id,
+      accion: "eliminar_proveedor",
+      entidad: "proveedores",
+      entidad_id: id,
+      detalles: { proveedor_id: id }
+    } as any);
+    load();
   };
 
   const filtered = proveedores.filter(p => p.nombre.toLowerCase().includes(search.toLowerCase()));

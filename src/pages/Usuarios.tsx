@@ -9,8 +9,16 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Shield, Users, History, Loader2, Save, ShieldCheck, ShieldAlert } from "lucide-react";
+import { Shield, Users, History, Loader2, Save, ShieldCheck, ShieldAlert, UserPlus } from "lucide-react";
+import { createClient } from "@supabase/supabase-js";
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "";
+const adminAuthClient = createClient(supabaseUrl, supabaseAnonKey, { auth: { persistSession: false } });
 
 interface UserProfile {
   id: string;
@@ -38,6 +46,7 @@ interface AuditLog {
 
 const ROLE_CONFIG: Record<AppRole, { label: string; color: string; desc: string }> = {
   admin: { label: "Administrador", color: "default", desc: "Acceso total al sistema" },
+  supervisor: { label: "Supervisor", color: "info", desc: "Gestión intermedia y permisos especiales" },
   cajero: { label: "Cajero", color: "secondary", desc: "Ventas y facturación básica" },
   contador: { label: "Contador", color: "outline", desc: "Reportes y exportaciones" },
 };
@@ -64,6 +73,10 @@ export default function Usuarios() {
   const [logs, setLogs] = useState<AuditLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [pendingChanges, setPendingChanges] = useState<Record<string, AppRole>>({});
+
+  const [createModal, setCreateModal] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [newUser, setNewUser] = useState({ nombre: "", email: "", password: "", role: "cajero" as AppRole });
 
   useEffect(() => {
     if (!user || !isAdmin) return;
@@ -127,6 +140,32 @@ export default function Usuarios() {
     return profiles.find(p => p.user_id === userId)?.nombre || profiles.find(p => p.user_id === userId)?.email || userId.slice(0, 8);
   };
 
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreating(true);
+    const { data, error } = await adminAuthClient.auth.signUp({
+      email: newUser.email,
+      password: newUser.password,
+      options: { data: { nombre: newUser.nombre, role: newUser.role } },
+    });
+
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success("Usuario creado exitosamente");
+      await supabase.from("audit_logs").insert({
+        user_id: user!.id,
+        accion: "crear_usuario",
+        entidad: "auth",
+        detalles: { email: newUser.email, rol: newUser.role },
+      } as any);
+      setCreateModal(false);
+      setNewUser({ nombre: "", email: "", password: "", role: "cajero" });
+      loadData();
+    }
+    setCreating(false);
+  };
+
   if (permLoading || loading) {
     return <div className="flex items-center justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
   }
@@ -157,9 +196,51 @@ export default function Usuarios() {
 
         <TabsContent value="usuarios" className="mt-4">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Usuarios Registrados</CardTitle>
-              <CardDescription>Asigna roles a cada usuario del sistema</CardDescription>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-base">Usuarios Registrados</CardTitle>
+                <CardDescription>Asigna roles a cada usuario del sistema</CardDescription>
+              </div>
+              <Dialog open={createModal} onOpenChange={setCreateModal}>
+                <DialogTrigger asChild>
+                  <Button size="sm"><UserPlus className="h-4 w-4 mr-2" />Nuevo Usuario</Button>
+                </DialogTrigger>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Crear Nuevo Usuario</DialogTitle>
+                    <DialogDescription>Genera una nueva cuenta para otro miembro del equipo.</DialogDescription>
+                  </DialogHeader>
+                  <form onSubmit={handleCreateUser} className="space-y-4 py-4">
+                    <div className="space-y-2">
+                      <Label>Nombre Completo</Label>
+                      <Input value={newUser.nombre} onChange={e => setNewUser({ ...newUser, nombre: e.target.value })} required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Correo Electrónico</Label>
+                      <Input type="email" value={newUser.email} onChange={e => setNewUser({ ...newUser, email: e.target.value })} required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Contraseña (Min. 6 caracteres)</Label>
+                      <Input type="password" value={newUser.password} onChange={e => setNewUser({ ...newUser, password: e.target.value })} minLength={6} required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Rol en el Sistema</Label>
+                      <Select value={newUser.role} onValueChange={(v) => setNewUser({ ...newUser, role: v as AppRole })}>
+                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {Object.entries(ROLE_CONFIG).map(([k, v]) => (
+                            <SelectItem key={k} value={k}>{v.label} - {v.desc}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <DialogFooter>
+                      <Button variant="outline" type="button" onClick={() => setCreateModal(false)}>Cancelar</Button>
+                      <Button type="submit" disabled={creating}>{creating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null} Creed Cuenta</Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
             </CardHeader>
             <CardContent>
               <Table>
