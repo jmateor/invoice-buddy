@@ -246,9 +246,28 @@ export default function Usuarios() {
                     <DialogDescription>Genera una nueva cuenta para otro miembro del equipo.</DialogDescription>
                   </DialogHeader>
                   <form onSubmit={handleCreateUser} className="space-y-4 py-4">
+                    <div className="flex justify-center">
+                      <label className="relative cursor-pointer group">
+                        <Avatar className="h-20 w-20 border-2 border-dashed border-muted-foreground/40 group-hover:border-primary transition-colors">
+                          {avatarPreview ? (
+                            <AvatarImage src={avatarPreview} alt="Preview" />
+                          ) : (
+                            <AvatarFallback className="bg-muted">
+                              <Camera className="h-6 w-6 text-muted-foreground" />
+                            </AvatarFallback>
+                          )}
+                        </Avatar>
+                        <input type="file" accept="image/*" className="hidden" onChange={handleAvatarChange} />
+                        <span className="text-[10px] text-muted-foreground block text-center mt-1">Foto</span>
+                      </label>
+                    </div>
                     <div className="space-y-2">
                       <Label>Nombre Completo</Label>
                       <Input value={newUser.nombre} onChange={e => setNewUser({ ...newUser, nombre: e.target.value })} required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Cédula</Label>
+                      <Input value={newUser.cedula} onChange={e => setNewUser({ ...newUser, cedula: e.target.value })} placeholder="000-0000000-0" required />
                     </div>
                     <div className="space-y-2">
                       <Label>Correo Electrónico</Label>
@@ -271,7 +290,7 @@ export default function Usuarios() {
                     </div>
                     <DialogFooter>
                       <Button variant="outline" type="button" onClick={() => setCreateModal(false)}>Cancelar</Button>
-                      <Button type="submit" disabled={creating}>{creating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null} Creed Cuenta</Button>
+                      <Button type="submit" disabled={creating}>{creating ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null} Crear Cuenta</Button>
                     </DialogFooter>
                   </form>
                 </DialogContent>
