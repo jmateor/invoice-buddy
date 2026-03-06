@@ -12,8 +12,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "sonner";
-import { Shield, Users, History, Loader2, Save, ShieldCheck, ShieldAlert, UserPlus } from "lucide-react";
+import { Shield, Users, History, Loader2, Save, ShieldCheck, ShieldAlert, UserPlus, Camera } from "lucide-react";
+import { createClient } from "@supabase/supabase-js";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
