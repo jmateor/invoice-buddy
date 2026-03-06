@@ -76,7 +76,9 @@ export default function Usuarios() {
 
   const [createModal, setCreateModal] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [newUser, setNewUser] = useState({ nombre: "", email: "", password: "", role: "cajero" as AppRole });
+  const [newUser, setNewUser] = useState({ nombre: "", email: "", password: "", role: "cajero" as AppRole, cedula: "" });
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user || !isAdmin) return;
