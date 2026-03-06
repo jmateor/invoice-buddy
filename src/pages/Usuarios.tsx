@@ -142,6 +142,14 @@ export default function Usuarios() {
     return profiles.find(p => p.user_id === userId)?.nombre || profiles.find(p => p.user_id === userId)?.email || userId.slice(0, 8);
   };
 
+  const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setAvatarFile(file);
+      setAvatarPreview(URL.createObjectURL(file));
+    }
+  };
+
   const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreating(true);
@@ -154,15 +162,39 @@ export default function Usuarios() {
     if (error) {
       toast.error(error.message);
     } else {
+      const newUserId = data.user?.id;
+
+      // Upload avatar if provided
+      let avatarUrl = "";
+      if (avatarFile && newUserId) {
+        const ext = avatarFile.name.split(".").pop();
+        const path = `${newUserId}/avatar.${ext}`;
+        const { error: uploadError } = await supabase.storage.from("avatars").upload(path, avatarFile, { upsert: true });
+        if (!uploadError) {
+          const { data: urlData } = supabase.storage.from("avatars").getPublicUrl(path);
+          avatarUrl = urlData.publicUrl;
+        }
+      }
+
+      // Update profile with cedula and avatar
+      if (newUserId) {
+        await supabase.from("profiles").update({
+          cedula: newUser.cedula,
+          avatar_url: avatarUrl,
+        } as any).eq("user_id", newUserId);
+      }
+
       toast.success("Usuario creado exitosamente");
       await supabase.from("audit_logs").insert({
         user_id: user!.id,
         accion: "crear_usuario",
         entidad: "auth",
-        detalles: { email: newUser.email, rol: newUser.role },
+        detalles: { email: newUser.email, rol: newUser.role, cedula: newUser.cedula },
       } as any);
       setCreateModal(false);
-      setNewUser({ nombre: "", email: "", password: "", role: "cajero" });
+      setNewUser({ nombre: "", email: "", password: "", role: "cajero", cedula: "" });
+      setAvatarFile(null);
+      setAvatarPreview(null);
       loadData();
     }
     setCreating(false);
