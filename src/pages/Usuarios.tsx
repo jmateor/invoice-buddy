@@ -16,7 +16,6 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { toast } from "sonner";
 import { Shield, Users, History, Loader2, Save, ShieldCheck, ShieldAlert, UserPlus, Camera } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
-import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "";
