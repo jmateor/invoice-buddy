@@ -535,30 +535,36 @@ export type Database = {
       }
       profiles: {
         Row: {
+          activo: boolean
           avatar_url: string | null
           cedula: string | null
           created_at: string
           email: string | null
+          fecha_desactivacion: string | null
           id: string
           nombre: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          activo?: boolean
           avatar_url?: string | null
           cedula?: string | null
           created_at?: string
           email?: string | null
+          fecha_desactivacion?: string | null
           id?: string
           nombre?: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          activo?: boolean
           avatar_url?: string | null
           cedula?: string | null
           created_at?: string
           email?: string | null
+          fecha_desactivacion?: string | null
           id?: string
           nombre?: string
           updated_at?: string
