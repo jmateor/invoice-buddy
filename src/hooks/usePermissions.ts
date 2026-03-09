@@ -9,7 +9,6 @@ interface Permissions {
   isAdmin: boolean;
   isCajero: boolean;
   isContador: boolean;
-  isSupervisor: boolean;
   loading: boolean;
   canAnular: boolean;
   canEliminar: boolean;
