@@ -422,6 +422,15 @@ export default function Productos() {
           precio={barcodePrint.precio}
         />
       )}
+
+      {kardex && (
+        <KardexModal
+          open={!!kardex}
+          onOpenChange={(o) => { if (!o) setKardex(null); }}
+          productoId={kardex.id}
+          productoNombre={kardex.nombre}
+        />
+      )}
     </div>
   );
 }
