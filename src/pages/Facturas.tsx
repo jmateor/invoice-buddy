@@ -274,6 +274,18 @@ export default function Facturas() {
           </Table>
         </CardContent>
       </Card>
+
+      {ncModal && (
+        <NotaCreditoModal
+          open={!!ncModal}
+          onOpenChange={o => { if (!o) setNcModal(null); }}
+          facturaId={ncModal.facturaId}
+          facturaNumero={ncModal.numero}
+          clienteId={ncModal.clienteId}
+          clienteNombre={ncModal.clienteNombre}
+          onCreated={load}
+        />
+      )}
     </div>
   );
 }
