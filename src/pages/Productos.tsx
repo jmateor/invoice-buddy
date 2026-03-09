@@ -69,6 +69,7 @@ export default function Productos() {
   const [editing, setEditing] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [barcodePrint, setBarcodePrint] = useState<{ codigo: string; nombre: string; precio: number } | null>(null);
+  const [kardex, setKardex] = useState<{ id: string; nombre: string } | null>(null);
 
   const load = async () => {
     const [prodRes, catRes] = await Promise.all([
