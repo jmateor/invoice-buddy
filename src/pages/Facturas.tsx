@@ -7,10 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Search, FileText, Ban, Download, Printer, MessageCircle } from "lucide-react";
+import { Search, FileText, Ban, Download, Printer, MessageCircle, RotateCcw } from "lucide-react";
 import { Link } from "react-router-dom";
 import { generateInvoicePDF, type NegocioData } from "@/lib/generateInvoicePDF";
 import { exportToExcel } from "@/lib/exportUtils";
+import NotaCreditoModal from "@/components/NotaCreditoModal";
 
 interface Factura {
   id: string;
