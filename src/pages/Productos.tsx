@@ -385,6 +385,9 @@ export default function Productos() {
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" title="Ver Kardex" onClick={() => setKardex({ id: p.id, nombre: p.nombre })}>
+                        <ClipboardList className="h-4 w-4 text-primary" />
+                      </Button>
                       {p.codigo_barras && (
                         <Button
                           variant="ghost"
