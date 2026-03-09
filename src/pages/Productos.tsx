@@ -12,8 +12,9 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Search, Package, AlertTriangle, ShieldCheck, Wrench, Barcode, Printer } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Package, AlertTriangle, ShieldCheck, Wrench, Barcode, Printer, ClipboardList } from "lucide-react";
 import BarcodePrintModal from "@/components/BarcodePrintModal";
+import KardexModal from "@/components/KardexModal";
 
 interface Categoria {
   id: string;
