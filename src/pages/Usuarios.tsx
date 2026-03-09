@@ -420,7 +420,7 @@ export default function Usuarios() {
                         </TableCell>
                         <TableCell>
                           {isActive
-                            ? <Badge variant="default" className="bg-green-600 text-white text-[10px]">Activo</Badge>
+                            ? <Badge variant="default" className="text-[10px]">Activo</Badge>
                             : <Badge variant="destructive" className="text-[10px]">Inactivo</Badge>
                           }
                         </TableCell>
