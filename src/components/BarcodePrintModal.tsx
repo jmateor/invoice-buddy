@@ -25,11 +25,10 @@ export default function BarcodePrintModal({ open, onOpenChange, codigo, nombre, 
     const labels = Array.from({ length: cantidad })
       .map(
         () => `
-        <div style="display:inline-block;text-align:center;padding:6px 10px;border:1px dashed #ccc;margin:4px;page-break-inside:avoid;">
-          <div style="font-size:10px;font-weight:bold;margin-bottom:2px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${nombre}</div>
+        <div class="label">
+          <div style="font-size:8px;font-weight:bold;margin-bottom:1px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${nombre}</div>
           <svg id="bc-${Math.random().toString(36).slice(2)}"></svg>
-          <div style="font-size:9px;margin-top:1px;">${codigo}</div>
-          ${precio != null ? `<div style="font-size:11px;font-weight:bold;margin-top:2px;">RD$ ${precio.toLocaleString("es-DO", { minimumFractionDigits: 2 })}</div>` : ""}
+          ${precio != null ? `<div style="font-size:9px;font-weight:bold;margin-top:1px;">RD$ ${precio.toLocaleString("es-DO", { minimumFractionDigits: 2 })}</div>` : ""}
         </div>`
       )
       .join("");
@@ -38,13 +37,19 @@ export default function BarcodePrintModal({ open, onOpenChange, codigo, nombre, 
       <title>Etiquetas</title>
       <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"><\/script>
       <style>
-        body { font-family: Arial, sans-serif; margin: 0; padding: 10px; }
+        body { font-family: Arial, sans-serif; margin: 0; padding: 5mm; }
+        .label {
+          display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
+          width: 63.5mm; height: 29.6mm; text-align: center;
+          box-sizing: border-box; padding: 2mm;
+          page-break-inside: avoid; overflow: hidden;
+        }
         @media print { body { margin: 0; padding: 0; } }
       </style>
     </head><body>${labels}</body>
     <script>
       document.querySelectorAll('svg[id^="bc-"]').forEach(el => {
-        JsBarcode(el, "${codigo}", { width: 1.5, height: 40, fontSize: 0, margin: 0 });
+        JsBarcode(el, "${codigo}", { width: 1.2, height: 30, fontSize: 0, margin: 0 });
       });
       setTimeout(() => window.print(), 300);
     <\/script></html>`);
