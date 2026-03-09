@@ -274,10 +274,22 @@ export default function POS() {
         if (detError) throw detError;
       }
 
-      // Only decrement stock for products, NOT services
+      // Decrement stock and register kardex for products
       for (const l of lineas) {
         if (l.tipo !== "servicio" && !l.producto_id.startsWith("os-")) {
+          const prod = productos.find(p => p.id === l.producto_id);
+          const stockAnterior = prod?.stock || 0;
+          const stockNuevo = stockAnterior - l.cantidad;
           await supabase.rpc("decrement_stock" as any, { p_id: l.producto_id, amount: l.cantidad });
+          await supabase.from("movimientos_inventario").insert({
+            producto_id: l.producto_id,
+            tipo_movimiento: "VENTA",
+            cantidad: -l.cantidad,
+            stock_anterior: stockAnterior,
+            stock_nuevo: stockNuevo,
+            referencia: `Factura ${numero}`,
+            usuario_id: user!.id,
+          } as any);
         }
       }
 
