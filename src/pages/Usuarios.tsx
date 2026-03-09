@@ -55,7 +55,6 @@ interface AuditLog {
 
 const ROLE_CONFIG: Record<AppRole, { label: string; color: string; desc: string }> = {
   admin: { label: "Administrador", color: "default", desc: "Acceso total al sistema" },
-  supervisor: { label: "Supervisor", color: "info", desc: "Gestión intermedia y permisos especiales" },
   cajero: { label: "Cajero", color: "secondary", desc: "Ventas y facturación básica" },
   contador: { label: "Contador", color: "outline", desc: "Reportes y exportaciones" },
 };
