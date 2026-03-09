@@ -251,6 +251,17 @@ export default function Facturas() {
                         </Button>
                       )}
                       {f.estado === "activa" && (
+                        <Button variant="ghost" size="icon" title="Nota de Crédito"
+                          onClick={() => setNcModal({
+                            facturaId: f.id, numero: f.numero,
+                            clienteId: (f as any).cliente_id || "",
+                            clienteNombre: f.clientes?.nombre || ""
+                          })}
+                        >
+                          <RotateCcw className="h-4 w-4 text-warning" />
+                        </Button>
+                      )}
+                      {f.estado === "activa" && (
                         <Button variant="ghost" size="icon" onClick={() => handleAnular(f.id)} title="Anular">
                           <Ban className="h-4 w-4 text-destructive" />
                         </Button>
