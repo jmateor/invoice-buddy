@@ -55,7 +55,6 @@ interface AuditLog {
 
 const ROLE_CONFIG: Record<AppRole, { label: string; color: string; desc: string }> = {
   admin: { label: "Administrador", color: "default", desc: "Acceso total al sistema" },
-  supervisor: { label: "Supervisor", color: "info", desc: "Gestión intermedia y permisos especiales" },
   cajero: { label: "Cajero", color: "secondary", desc: "Ventas y facturación básica" },
   contador: { label: "Contador", color: "outline", desc: "Reportes y exportaciones" },
 };
@@ -421,7 +420,7 @@ export default function Usuarios() {
                         </TableCell>
                         <TableCell>
                           {isActive
-                            ? <Badge variant="default" className="bg-green-600 text-white text-[10px]">Activo</Badge>
+                            ? <Badge variant="default" className="text-[10px]">Activo</Badge>
                             : <Badge variant="destructive" className="text-[10px]">Inactivo</Badge>
                           }
                         </TableCell>
