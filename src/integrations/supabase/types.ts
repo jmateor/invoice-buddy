@@ -292,6 +292,51 @@ export type Database = {
           },
         ]
       }
+      detalle_notas_credito: {
+        Row: {
+          cantidad: number
+          id: string
+          itbis: number
+          nota_credito_id: string
+          precio_unitario: number
+          producto_id: string
+          subtotal: number
+        }
+        Insert: {
+          cantidad?: number
+          id?: string
+          itbis?: number
+          nota_credito_id: string
+          precio_unitario: number
+          producto_id: string
+          subtotal?: number
+        }
+        Update: {
+          cantidad?: number
+          id?: string
+          itbis?: number
+          nota_credito_id?: string
+          precio_unitario?: number
+          producto_id?: string
+          subtotal?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "detalle_notas_credito_nota_credito_id_fkey"
+            columns: ["nota_credito_id"]
+            isOneToOne: false
+            referencedRelation: "notas_credito"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "detalle_notas_credito_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       facturas: {
         Row: {
           cliente_id: string
@@ -354,6 +399,50 @@ export type Database = {
           },
         ]
       }
+      movimientos_inventario: {
+        Row: {
+          cantidad: number
+          created_at: string
+          id: string
+          producto_id: string
+          referencia: string | null
+          stock_anterior: number
+          stock_nuevo: number
+          tipo_movimiento: string
+          usuario_id: string
+        }
+        Insert: {
+          cantidad: number
+          created_at?: string
+          id?: string
+          producto_id: string
+          referencia?: string | null
+          stock_anterior?: number
+          stock_nuevo?: number
+          tipo_movimiento: string
+          usuario_id: string
+        }
+        Update: {
+          cantidad?: number
+          created_at?: string
+          id?: string
+          producto_id?: string
+          referencia?: string | null
+          stock_anterior?: number
+          stock_nuevo?: number
+          tipo_movimiento?: string
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "movimientos_inventario_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ncf_secuencias: {
         Row: {
           activo: boolean
@@ -389,6 +478,51 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      notas_credito: {
+        Row: {
+          cliente_id: string
+          created_at: string
+          factura_id: string
+          id: string
+          motivo: string
+          total: number
+          usuario_id: string
+        }
+        Insert: {
+          cliente_id: string
+          created_at?: string
+          factura_id: string
+          id?: string
+          motivo: string
+          total?: number
+          usuario_id: string
+        }
+        Update: {
+          cliente_id?: string
+          created_at?: string
+          factura_id?: string
+          id?: string
+          motivo?: string
+          total?: number
+          usuario_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notas_credito_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notas_credito_factura_id_fkey"
+            columns: ["factura_id"]
+            isOneToOne: false
+            referencedRelation: "facturas"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ordenes_servicio: {
         Row: {

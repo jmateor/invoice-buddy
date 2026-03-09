@@ -12,8 +12,9 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Search, Package, AlertTriangle, ShieldCheck, Wrench, Barcode, Printer } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, Package, AlertTriangle, ShieldCheck, Wrench, Barcode, Printer, ClipboardList } from "lucide-react";
 import BarcodePrintModal from "@/components/BarcodePrintModal";
+import KardexModal from "@/components/KardexModal";
 
 interface Categoria {
   id: string;
@@ -68,6 +69,7 @@ export default function Productos() {
   const [editing, setEditing] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [barcodePrint, setBarcodePrint] = useState<{ codigo: string; nombre: string; precio: number } | null>(null);
+  const [kardex, setKardex] = useState<{ id: string; nombre: string } | null>(null);
 
   const load = async () => {
     const [prodRes, catRes] = await Promise.all([
@@ -383,6 +385,9 @@ export default function Productos() {
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" title="Ver Kardex" onClick={() => setKardex({ id: p.id, nombre: p.nombre })}>
+                        <ClipboardList className="h-4 w-4 text-primary" />
+                      </Button>
                       {p.codigo_barras && (
                         <Button
                           variant="ghost"
@@ -415,6 +420,15 @@ export default function Productos() {
           codigo={barcodePrint.codigo}
           nombre={barcodePrint.nombre}
           precio={barcodePrint.precio}
+        />
+      )}
+
+      {kardex && (
+        <KardexModal
+          open={!!kardex}
+          onOpenChange={(o) => { if (!o) setKardex(null); }}
+          productoId={kardex.id}
+          productoNombre={kardex.nombre}
         />
       )}
     </div>

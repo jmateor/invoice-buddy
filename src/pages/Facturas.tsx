@@ -7,10 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Search, FileText, Ban, Download, Printer, MessageCircle } from "lucide-react";
+import { Search, FileText, Ban, Download, Printer, MessageCircle, RotateCcw } from "lucide-react";
 import { Link } from "react-router-dom";
 import { generateInvoicePDF, type NegocioData } from "@/lib/generateInvoicePDF";
 import { exportToExcel } from "@/lib/exportUtils";
+import NotaCreditoModal from "@/components/NotaCreditoModal";
 
 interface Factura {
   id: string;
@@ -32,6 +33,7 @@ export default function Facturas() {
   const [search, setSearch] = useState("");
   const [negocio, setNegocio] = useState<NegocioData | null>(null);
   const [formatoImpresion, setFormatoImpresion] = useState<"carta" | "80mm" | "58mm">("carta");
+  const [ncModal, setNcModal] = useState<{ facturaId: string; numero: string; clienteId: string; clienteNombre: string } | null>(null);
 
   const load = async () => {
     const [facRes, negRes] = await Promise.all([
@@ -249,6 +251,17 @@ export default function Facturas() {
                         </Button>
                       )}
                       {f.estado === "activa" && (
+                        <Button variant="ghost" size="icon" title="Nota de Crédito"
+                          onClick={() => setNcModal({
+                            facturaId: f.id, numero: f.numero,
+                            clienteId: (f as any).cliente_id || "",
+                            clienteNombre: f.clientes?.nombre || ""
+                          })}
+                        >
+                          <RotateCcw className="h-4 w-4 text-warning" />
+                        </Button>
+                      )}
+                      {f.estado === "activa" && (
                         <Button variant="ghost" size="icon" onClick={() => handleAnular(f.id)} title="Anular">
                           <Ban className="h-4 w-4 text-destructive" />
                         </Button>
@@ -261,6 +274,18 @@ export default function Facturas() {
           </Table>
         </CardContent>
       </Card>
+
+      {ncModal && (
+        <NotaCreditoModal
+          open={!!ncModal}
+          onOpenChange={o => { if (!o) setNcModal(null); }}
+          facturaId={ncModal.facturaId}
+          facturaNumero={ncModal.numero}
+          clienteId={ncModal.clienteId}
+          clienteNombre={ncModal.clienteNombre}
+          onCreated={load}
+        />
+      )}
     </div>
   );
 }
