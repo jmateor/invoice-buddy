@@ -40,7 +40,7 @@ export function usePermissions(): Permissions {
   const isAdmin = role === "admin";
   const isCajero = role === "cajero";
   const isContador = role === "contador";
-  const isSupervisor = role === "supervisor";
+  
 
   return {
     role,
