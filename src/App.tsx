@@ -20,6 +20,7 @@ import Usuarios from "./pages/Usuarios";
 import OrdenesServicio from "./pages/OrdenesServicio";
 import Categorias from "./pages/Categorias";
 import Auditoria from "./pages/Auditoria";
+import NotasCredito from "./pages/NotasCredito";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
