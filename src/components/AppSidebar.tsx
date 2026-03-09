@@ -39,6 +39,7 @@ const mainItems = [
   { title: "Productos", url: "/productos", icon: Package },
   { title: "Categorías", url: "/categorias", icon: Tags },
   { title: "Facturas", url: "/facturas", icon: FileText },
+  { title: "Notas de Crédito", url: "/notas-credito", icon: RotateCcw },
 ];
 
 const secondaryItems = [

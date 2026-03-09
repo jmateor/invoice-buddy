@@ -4,31 +4,29 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, LineChart, Line } from "recharts";
-import { Users, Package, FileText, DollarSign, AlertTriangle, TrendingUp, Receipt } from "lucide-react";
+import { Users, Package, FileText, DollarSign, AlertTriangle, TrendingUp, Receipt, Trophy, Star } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 export default function Dashboard() {
   const { user } = useAuth();
   const [stats, setStats] = useState({
-    clientes: 0,
-    productos: 0,
-    facturas: 0,
-    ventasMes: 0,
-    ventasHoy: 0,
-    stockBajo: 0,
-    facturasHoy: 0,
-    ticketPromedio: 0,
+    clientes: 0, productos: 0, facturas: 0, ventasMes: 0,
+    ventasHoy: 0, stockBajo: 0, facturasHoy: 0, ticketPromedio: 0,
   });
   const [tendencia, setTendencia] = useState<{ dia: string; total: number }[]>([]);
   const [comparativa, setComparativa] = useState<{ mes: string; total: number }[]>([]);
+  const [topProductos, setTopProductos] = useState<{ nombre: string; cantidad: number }[]>([]);
+  const [topClientes, setTopClientes] = useState<{ nombre: string; total: number }[]>([]);
 
   useEffect(() => {
     if (!user) return;
     const load = async () => {
-      const [clientesRes, productosRes, facturasRes, stockRes] = await Promise.all([
+      const [clientesRes, productosRes, facturasRes, stockRes, detallesRes] = await Promise.all([
         supabase.from("clientes").select("id", { count: "exact", head: true }),
         supabase.from("productos").select("id", { count: "exact", head: true }),
-        supabase.from("facturas").select("id, total, created_at, estado").eq("estado", "activa" as any),
+        supabase.from("facturas").select("id, total, created_at, estado, cliente_id, clientes(nombre)").eq("estado", "activa" as any),
         supabase.from("productos").select("id").lt("stock", 5),
+        supabase.from("detalle_facturas").select("cantidad, productos(nombre), factura_id, facturas!inner(estado, created_at)"),
       ]);
 
       const facturas = facturasRes.data || [];
@@ -45,11 +43,8 @@ export default function Dashboard() {
         clientes: clientesRes.count || 0,
         productos: productosRes.count || 0,
         facturas: facturas.length,
-        ventasMes,
-        ventasHoy,
+        ventasMes, ventasHoy, facturasHoy, ticketPromedio,
         stockBajo: stockRes.data?.length || 0,
-        facturasHoy,
-        ticketPromedio,
       });
 
       // Trend (last 7 days)
@@ -80,6 +75,26 @@ export default function Dashboard() {
         if (key in monthlyMap) monthlyMap[key] += Number(x.total);
       });
       setComparativa(Object.entries(monthlyMap).map(([mes, total]) => ({ mes, total })));
+
+      // Top 5 productos del mes
+      const detalles = (detallesRes.data as any) || [];
+      const monthDetalles = detalles.filter((d: any) => d.facturas?.estado === "activa" && d.facturas?.created_at >= startOfMonth);
+      const prodMap: Record<string, { nombre: string; cantidad: number }> = {};
+      monthDetalles.forEach((d: any) => {
+        const name = d.productos?.nombre || "Desconocido";
+        if (!prodMap[name]) prodMap[name] = { nombre: name, cantidad: 0 };
+        prodMap[name].cantidad += d.cantidad;
+      });
+      setTopProductos(Object.values(prodMap).sort((a, b) => b.cantidad - a.cantidad).slice(0, 5));
+
+      // Top 5 clientes
+      const clientMap: Record<string, { nombre: string; total: number }> = {};
+      facturas.filter(f => f.created_at >= startOfMonth).forEach(f => {
+        const name = (f as any).clientes?.nombre || "Sin nombre";
+        if (!clientMap[name]) clientMap[name] = { nombre: name, total: 0 };
+        clientMap[name].total += Number(f.total);
+      });
+      setTopClientes(Object.values(clientMap).sort((a, b) => b.total - a.total).slice(0, 5));
     };
     load();
   }, [user]);
@@ -147,6 +162,51 @@ export default function Dashboard() {
                 <Bar dataKey="total" fill="hsl(162, 63%, 41%)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ChartContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Smart metrics: Top products and clients */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Trophy className="h-4 w-4 text-primary" /> Top 5 Productos del Mes
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {topProductos.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">Sin ventas este mes</p>
+            ) : topProductos.map((p, i) => (
+              <div key={p.nombre} className="flex items-center gap-3">
+                <Badge variant={i === 0 ? "default" : "secondary"} className="w-6 h-6 flex items-center justify-center p-0 text-xs shrink-0">
+                  {i + 1}
+                </Badge>
+                <span className="text-sm font-medium text-foreground flex-1 truncate">{p.nombre}</span>
+                <span className="text-sm font-bold text-primary">{p.cantidad} uds</span>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Star className="h-4 w-4 text-primary" /> Top 5 Clientes del Mes
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {topClientes.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">Sin ventas este mes</p>
+            ) : topClientes.map((c, i) => (
+              <div key={c.nombre} className="flex items-center gap-3">
+                <Badge variant={i === 0 ? "default" : "secondary"} className="w-6 h-6 flex items-center justify-center p-0 text-xs shrink-0">
+                  {i + 1}
+                </Badge>
+                <span className="text-sm font-medium text-foreground flex-1 truncate">{c.nombre}</span>
+                <span className="text-sm font-bold text-primary">{fmt(c.total)}</span>
+              </div>
+            ))}
           </CardContent>
         </Card>
       </div>
