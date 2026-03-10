@@ -169,8 +169,24 @@ export default function PaymentModal({
             </div>
           )}
 
-          {/* For non-cash methods */}
-          {!isEfectivo && (
+          {/* For nota de crédito */}
+          {isNotaCredito && (
+            <div className={`rounded-lg p-4 text-center border ${notaCreditoMonto >= total ? "bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800" : "bg-destructive/10 border-destructive/20"}`}>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Crédito disponible del cliente</p>
+              <p className={`text-2xl font-bold ${notaCreditoMonto >= total ? "text-green-600 dark:text-green-400" : "text-destructive"}`}>
+                {fmt(notaCreditoMonto)}
+              </p>
+              {notaCreditoMonto < total && (
+                <p className="text-xs text-destructive mt-1">Crédito insuficiente. Faltan {fmt(total - notaCreditoMonto)}</p>
+              )}
+              {notaCreditoMonto >= total && notaCreditoMonto - total > 0 && (
+                <p className="text-xs text-muted-foreground mt-1">Crédito restante después: {fmt(notaCreditoMonto - total)}</p>
+              )}
+            </div>
+          )}
+
+          {/* For non-cash, non-NC methods */}
+          {!isEfectivo && !isNotaCredito && (
             <div className="rounded-lg p-4 text-center bg-muted/50 border border-border">
               <p className="text-sm text-muted-foreground">
                 Pago por {metodoInfo.label.toLowerCase()} — no requiere cambio
