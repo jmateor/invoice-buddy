@@ -135,6 +135,16 @@ export default function POS() {
     window.history.replaceState({}, document.title);
   }, [location.state]);
 
+  // Fetch pending credit notes for selected client
+  useEffect(() => {
+    if (!clienteId) { setClienteNotasCredito([]); return; }
+    supabase.from("notas_credito")
+      .select("id, total, numero")
+      .eq("cliente_id", clienteId)
+      .eq("estado", "pendiente" as any)
+      .then(({ data }) => setClienteNotasCredito((data as any) || []));
+  }, [clienteId]);
+
   // Keyboard shortcut: focus search on F2
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
