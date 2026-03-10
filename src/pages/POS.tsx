@@ -672,6 +672,7 @@ export default function POS() {
         metodoPago={metodoPago}
         onConfirm={handleSave}
         saving={saving}
+        notaCreditoMonto={clienteNotasCredito.reduce((s, nc) => s + Number(nc.total), 0)}
       />
     </div>
   );
