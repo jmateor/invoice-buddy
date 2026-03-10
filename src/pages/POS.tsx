@@ -68,6 +68,7 @@ export default function POS() {
   const [productSearch, setProductSearch] = useState("");
   const [clientSearch, setClientSearch] = useState("");
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [clienteNotasCredito, setClienteNotasCredito] = useState<{ id: string; total: number; numero: string | null }[]>([]);
   const searchRef = useRef<HTMLInputElement>(null);
   const [negocio, setNegocio] = useState<NegocioData | null>(null);
   const [formatoImpresion, setFormatoImpresion] = useState<"carta" | "80mm" | "58mm">("80mm");
