@@ -573,11 +573,12 @@ export default function POS() {
             {/* Payment method */}
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Método de pago</label>
-              <div className="grid grid-cols-3 gap-1.5">
+              <div className="grid grid-cols-2 gap-1.5">
                 {[
                   { value: "efectivo", icon: Banknote, label: "Efectivo" },
                   { value: "tarjeta", icon: CreditCard, label: "Tarjeta" },
                   { value: "transferencia", icon: ArrowRightLeft, label: "Transf." },
+                  ...(clienteNotasCredito.length > 0 ? [{ value: "nota_credito", icon: RotateCcw, label: `NC (${clienteNotasCredito.length})` }] : []),
                 ].map(m => (
                   <Button
                     key={m.value}
@@ -591,6 +592,19 @@ export default function POS() {
                   </Button>
                 ))}
               </div>
+              {metodoPago === "nota_credito" && clienteNotasCredito.length > 0 && (
+                <div className="text-xs p-2 rounded-md bg-primary/5 border border-primary/20 space-y-0.5">
+                  <p className="font-medium text-foreground">Créditos disponibles:</p>
+                  {clienteNotasCredito.map(nc => (
+                    <p key={nc.id} className="text-muted-foreground">
+                      {nc.numero || nc.id.slice(0, 8)} — RD$ {Number(nc.total).toLocaleString("es-DO", { minimumFractionDigits: 2 })}
+                    </p>
+                  ))}
+                  <p className="font-medium text-primary">
+                    Total: RD$ {clienteNotasCredito.reduce((s, nc) => s + Number(nc.total), 0).toLocaleString("es-DO", { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+              )}
             </div>
 
             <Separator />
