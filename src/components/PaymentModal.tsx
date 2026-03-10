@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, XCircle, Banknote, CreditCard, ArrowRightLeft } from "lucide-react";
+import { CheckCircle, XCircle, Banknote, CreditCard, ArrowRightLeft, RotateCcw } from "lucide-react";
 
 interface PaymentModalProps {
   open: boolean;
@@ -22,12 +22,14 @@ interface PaymentModalProps {
   metodoPago: string;
   onConfirm: () => void;
   saving: boolean;
+  notaCreditoMonto?: number;
 }
 
 const METODO_ICONS: Record<string, { icon: typeof Banknote; label: string }> = {
   efectivo: { icon: Banknote, label: "Efectivo" },
   tarjeta: { icon: CreditCard, label: "Tarjeta" },
   transferencia: { icon: ArrowRightLeft, label: "Transferencia" },
+  nota_credito: { icon: RotateCcw, label: "Nota de Crédito" },
 };
 
 const fmt = (n: number) =>
