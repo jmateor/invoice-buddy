@@ -45,6 +45,7 @@ export default function PaymentModal({
   metodoPago,
   onConfirm,
   saving,
+  notaCreditoMonto = 0,
 }: PaymentModalProps) {
   const [montoRecibido, setMontoRecibido] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
