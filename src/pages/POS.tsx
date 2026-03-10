@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import {
   Search, Trash2, FileText, Loader2, UserPlus, Plus, Minus,
   ShoppingCart, CreditCard, Banknote, ArrowRightLeft, MessageCircle,
-  Wrench, ShieldCheck
+  Wrench, ShieldCheck, RotateCcw
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { generateInvoicePDF, type NegocioData } from "@/lib/generateInvoicePDF";
