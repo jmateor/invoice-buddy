@@ -319,6 +319,26 @@ export default function POS() {
           .eq("id", ordenServicioId);
       }
 
+      // Consume credit notes if paying with nota_credito
+      if (metodoPago === "nota_credito" && clienteNotasCredito.length > 0) {
+        let remaining = total;
+        for (const nc of clienteNotasCredito) {
+          if (remaining <= 0) break;
+          const ncTotal = Number(nc.total);
+          if (ncTotal <= remaining) {
+            // Fully consume this NC
+            await supabase.from("notas_credito").update({ estado: "consumida" } as any).eq("id", nc.id);
+            remaining -= ncTotal;
+          } else {
+            // Partially consume: update total to remainder, mark as consumed
+            await supabase.from("notas_credito").update({ estado: "consumida" } as any).eq("id", nc.id);
+            remaining = 0;
+          }
+        }
+        // Link first NC to factura
+        await supabase.from("facturas").update({ nota_credito_id: clienteNotasCredito[0].id } as any).eq("id", factura.id);
+      }
+
       const cliente = clientes.find(c => c.id === clienteId);
       generateInvoicePDF({
         numero, fecha: new Date().toISOString(),
