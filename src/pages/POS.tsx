@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import {
   Search, Trash2, FileText, Loader2, UserPlus, Plus, Minus,
   ShoppingCart, CreditCard, Banknote, ArrowRightLeft, MessageCircle,
-  Wrench, ShieldCheck
+  Wrench, ShieldCheck, RotateCcw
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { generateInvoicePDF, type NegocioData } from "@/lib/generateInvoicePDF";
@@ -68,6 +68,7 @@ export default function POS() {
   const [productSearch, setProductSearch] = useState("");
   const [clientSearch, setClientSearch] = useState("");
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [clienteNotasCredito, setClienteNotasCredito] = useState<{ id: string; total: number; numero: string | null }[]>([]);
   const searchRef = useRef<HTMLInputElement>(null);
   const [negocio, setNegocio] = useState<NegocioData | null>(null);
   const [formatoImpresion, setFormatoImpresion] = useState<"carta" | "80mm" | "58mm">("80mm");
@@ -133,6 +134,16 @@ export default function POS() {
     // Clear location state to prevent re-loading on re-render
     window.history.replaceState({}, document.title);
   }, [location.state]);
+
+  // Fetch pending credit notes for selected client
+  useEffect(() => {
+    if (!clienteId) { setClienteNotasCredito([]); return; }
+    supabase.from("notas_credito")
+      .select("id, total, numero")
+      .eq("cliente_id", clienteId)
+      .eq("estado", "pendiente" as any)
+      .then(({ data }) => setClienteNotasCredito((data as any) || []));
+  }, [clienteId]);
 
   // Keyboard shortcut: focus search on F2
   useEffect(() => {
@@ -306,6 +317,26 @@ export default function POS() {
         await supabase.from("ordenes_servicio")
           .update({ factura_id: factura.id, estado: "listo" } as any)
           .eq("id", ordenServicioId);
+      }
+
+      // Consume credit notes if paying with nota_credito
+      if (metodoPago === "nota_credito" && clienteNotasCredito.length > 0) {
+        let remaining = total;
+        for (const nc of clienteNotasCredito) {
+          if (remaining <= 0) break;
+          const ncTotal = Number(nc.total);
+          if (ncTotal <= remaining) {
+            // Fully consume this NC
+            await supabase.from("notas_credito").update({ estado: "consumida" } as any).eq("id", nc.id);
+            remaining -= ncTotal;
+          } else {
+            // Partially consume: update total to remainder, mark as consumed
+            await supabase.from("notas_credito").update({ estado: "consumida" } as any).eq("id", nc.id);
+            remaining = 0;
+          }
+        }
+        // Link first NC to factura
+        await supabase.from("facturas").update({ nota_credito_id: clienteNotasCredito[0].id } as any).eq("id", factura.id);
       }
 
       const cliente = clientes.find(c => c.id === clienteId);
@@ -562,11 +593,12 @@ export default function POS() {
             {/* Payment method */}
             <div className="space-y-1.5">
               <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Método de pago</label>
-              <div className="grid grid-cols-3 gap-1.5">
+              <div className="grid grid-cols-2 gap-1.5">
                 {[
                   { value: "efectivo", icon: Banknote, label: "Efectivo" },
                   { value: "tarjeta", icon: CreditCard, label: "Tarjeta" },
                   { value: "transferencia", icon: ArrowRightLeft, label: "Transf." },
+                  ...(clienteNotasCredito.length > 0 ? [{ value: "nota_credito", icon: RotateCcw, label: `NC (${clienteNotasCredito.length})` }] : []),
                 ].map(m => (
                   <Button
                     key={m.value}
@@ -580,6 +612,19 @@ export default function POS() {
                   </Button>
                 ))}
               </div>
+              {metodoPago === "nota_credito" && clienteNotasCredito.length > 0 && (
+                <div className="text-xs p-2 rounded-md bg-primary/5 border border-primary/20 space-y-0.5">
+                  <p className="font-medium text-foreground">Créditos disponibles:</p>
+                  {clienteNotasCredito.map(nc => (
+                    <p key={nc.id} className="text-muted-foreground">
+                      {nc.numero || nc.id.slice(0, 8)} — RD$ {Number(nc.total).toLocaleString("es-DO", { minimumFractionDigits: 2 })}
+                    </p>
+                  ))}
+                  <p className="font-medium text-primary">
+                    Total: RD$ {clienteNotasCredito.reduce((s, nc) => s + Number(nc.total), 0).toLocaleString("es-DO", { minimumFractionDigits: 2 })}
+                  </p>
+                </div>
+              )}
             </div>
 
             <Separator />
@@ -647,6 +692,7 @@ export default function POS() {
         metodoPago={metodoPago}
         onConfirm={handleSave}
         saving={saving}
+        notaCreditoMonto={clienteNotasCredito.reduce((s, nc) => s + Number(nc.total), 0)}
       />
     </div>
   );

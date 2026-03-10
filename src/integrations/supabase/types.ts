@@ -348,6 +348,7 @@ export type Database = {
           itbis: number
           metodo_pago: Database["public"]["Enums"]["metodo_pago"]
           ncf: string | null
+          nota_credito_id: string | null
           notas: string | null
           numero: string
           subtotal: number
@@ -365,6 +366,7 @@ export type Database = {
           itbis?: number
           metodo_pago?: Database["public"]["Enums"]["metodo_pago"]
           ncf?: string | null
+          nota_credito_id?: string | null
           notas?: string | null
           numero: string
           subtotal?: number
@@ -382,6 +384,7 @@ export type Database = {
           itbis?: number
           metodo_pago?: Database["public"]["Enums"]["metodo_pago"]
           ncf?: string | null
+          nota_credito_id?: string | null
           notas?: string | null
           numero?: string
           subtotal?: number
@@ -395,6 +398,13 @@ export type Database = {
             columns: ["cliente_id"]
             isOneToOne: false
             referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "facturas_nota_credito_id_fkey"
+            columns: ["nota_credito_id"]
+            isOneToOne: false
+            referencedRelation: "notas_credito"
             referencedColumns: ["id"]
           },
         ]
@@ -483,27 +493,33 @@ export type Database = {
         Row: {
           cliente_id: string
           created_at: string
+          estado: string
           factura_id: string
           id: string
           motivo: string
+          numero: string | null
           total: number
           usuario_id: string
         }
         Insert: {
           cliente_id: string
           created_at?: string
+          estado?: string
           factura_id: string
           id?: string
           motivo: string
+          numero?: string | null
           total?: number
           usuario_id: string
         }
         Update: {
           cliente_id?: string
           created_at?: string
+          estado?: string
           factura_id?: string
           id?: string
           motivo?: string
+          numero?: string | null
           total?: number
           usuario_id?: string
         }
@@ -778,7 +794,7 @@ export type Database = {
     Enums: {
       app_role: "admin" | "cajero" | "contador"
       estado_factura: "activa" | "anulada"
-      metodo_pago: "efectivo" | "tarjeta" | "transferencia"
+      metodo_pago: "efectivo" | "tarjeta" | "transferencia" | "nota_credito"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -908,7 +924,7 @@ export const Constants = {
     Enums: {
       app_role: ["admin", "cajero", "contador"],
       estado_factura: ["activa", "anulada"],
-      metodo_pago: ["efectivo", "tarjeta", "transferencia"],
+      metodo_pago: ["efectivo", "tarjeta", "transferencia", "nota_credito"],
     },
   },
 } as const

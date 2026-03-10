@@ -10,7 +10,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import { RotateCcw, Loader2 } from "lucide-react";
+import { RotateCcw, Loader2, Printer } from "lucide-react";
+import { generateCreditNotePDF } from "@/lib/generateCreditNotePDF";
+import type { NegocioData } from "@/lib/generateInvoicePDF";
 
 interface DetalleFactura {
   id: string;
@@ -85,6 +87,9 @@ export default function NotaCreditoModal({ open, onOpenChange, facturaId, factur
 
     setSaving(true);
     try {
+      // Generate NC number
+      const ncNumero = `NC-${Date.now().toString().slice(-8)}`;
+
       // Create nota de crédito
       const { data: nota, error: notaErr } = await supabase.from("notas_credito").insert({
         factura_id: facturaId,
@@ -92,6 +97,8 @@ export default function NotaCreditoModal({ open, onOpenChange, facturaId, factur
         motivo,
         total: totalDevolucion,
         usuario_id: user!.id,
+        numero: ncNumero,
+        estado: "pendiente",
       } as any).select().single();
       if (notaErr) throw notaErr;
 
@@ -110,7 +117,6 @@ export default function NotaCreditoModal({ open, onOpenChange, facturaId, factur
       // Restore stock + register kardex for each product
       for (const d of items) {
         const cant = selected[d.id];
-        // Get current stock
         const { data: prod } = await supabase.from("productos").select("stock, tipo").eq("id", d.producto_id).single();
         if (prod && prod.tipo !== "servicio") {
           const stockAnterior = prod.stock;
@@ -122,7 +128,7 @@ export default function NotaCreditoModal({ open, onOpenChange, facturaId, factur
             cantidad: cant,
             stock_anterior: stockAnterior,
             stock_nuevo: stockNuevo,
-            referencia: `NC de Factura ${facturaNumero}`,
+            referencia: `NC ${ncNumero} de Factura ${facturaNumero}`,
             usuario_id: user!.id,
           } as any);
         }
@@ -137,7 +143,42 @@ export default function NotaCreditoModal({ open, onOpenChange, facturaId, factur
         detalles: { factura_id: facturaId, factura_numero: facturaNumero, total: totalDevolucion, items: items.length },
       } as any);
 
-      toast.success(`Nota de crédito creada por RD$ ${totalDevolucion.toLocaleString("es-DO", { minimumFractionDigits: 2 })}`);
+      // Get negocio for PDF
+      const { data: negData } = await supabase.from("configuracion_negocio")
+        .select("nombre_comercial, razon_social, rnc, direccion, telefono, whatsapp, email, logo_url, mensaje_factura, formato_impresion")
+        .maybeSingle();
+
+      const negocio: NegocioData | undefined = negData ? {
+        nombre_comercial: (negData as any).nombre_comercial,
+        razon_social: (negData as any).razon_social,
+        rnc: (negData as any).rnc,
+        direccion: (negData as any).direccion,
+        telefono: (negData as any).telefono,
+        whatsapp: (negData as any).whatsapp,
+        email: (negData as any).email,
+        logo_url: (negData as any).logo_url,
+        mensaje_factura: (negData as any).mensaje_factura,
+      } : undefined;
+
+      // Auto-print voucher
+      generateCreditNotePDF({
+        numero: ncNumero,
+        fecha: new Date().toISOString(),
+        facturaNumero,
+        cliente: { nombre: clienteNombre },
+        motivo,
+        detalles: items.map(d => ({
+          nombre: d.productos?.nombre || "",
+          cantidad: selected[d.id],
+          precio_unitario: d.precio_unitario,
+          subtotal: (d.subtotal / d.cantidad) * selected[d.id],
+        })),
+        total: totalDevolucion,
+        negocio,
+        formato: (negData as any)?.formato_impresion || "80mm",
+      }, "print");
+
+      toast.success(`Nota de crédito ${ncNumero} creada por RD$ ${totalDevolucion.toLocaleString("es-DO", { minimumFractionDigits: 2 })}. No se realizan devoluciones en efectivo.`);
       onOpenChange(false);
       onCreated();
     } catch (err: any) {
@@ -156,6 +197,7 @@ export default function NotaCreditoModal({ open, onOpenChange, facturaId, factur
           </DialogTitle>
         </DialogHeader>
         <p className="text-sm text-muted-foreground">Cliente: <strong>{clienteNombre}</strong></p>
+        <p className="text-xs text-destructive font-medium">⚠ No se realizan devoluciones en efectivo. El crédito se aplica a futuras compras.</p>
 
         <div className="space-y-3">
           <Label>Motivo de la devolución *</Label>
@@ -214,8 +256,8 @@ export default function NotaCreditoModal({ open, onOpenChange, facturaId, factur
         </div>
 
         <Button onClick={handleSubmit} disabled={saving} className="w-full">
-          {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RotateCcw className="mr-2 h-4 w-4" />}
-          Generar Nota de Crédito
+          {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
+          Generar e Imprimir Nota de Crédito
         </Button>
       </DialogContent>
     </Dialog>

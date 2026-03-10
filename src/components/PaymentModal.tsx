@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle, XCircle, Banknote, CreditCard, ArrowRightLeft } from "lucide-react";
+import { CheckCircle, XCircle, Banknote, CreditCard, ArrowRightLeft, RotateCcw } from "lucide-react";
 
 interface PaymentModalProps {
   open: boolean;
@@ -22,12 +22,14 @@ interface PaymentModalProps {
   metodoPago: string;
   onConfirm: () => void;
   saving: boolean;
+  notaCreditoMonto?: number;
 }
 
 const METODO_ICONS: Record<string, { icon: typeof Banknote; label: string }> = {
   efectivo: { icon: Banknote, label: "Efectivo" },
   tarjeta: { icon: CreditCard, label: "Tarjeta" },
   transferencia: { icon: ArrowRightLeft, label: "Transferencia" },
+  nota_credito: { icon: RotateCcw, label: "Nota de Crédito" },
 };
 
 const fmt = (n: number) =>
@@ -43,13 +45,15 @@ export default function PaymentModal({
   metodoPago,
   onConfirm,
   saving,
+  notaCreditoMonto = 0,
 }: PaymentModalProps) {
   const [montoRecibido, setMontoRecibido] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const isEfectivo = metodoPago === "efectivo";
+  const isNotaCredito = metodoPago === "nota_credito";
   const monto = parseFloat(montoRecibido) || 0;
   const cambio = monto - total;
-  const isValid = isEfectivo ? monto >= total : true;
+  const isValid = isNotaCredito ? notaCreditoMonto >= total : isEfectivo ? monto >= total : true;
   const metodoInfo = METODO_ICONS[metodoPago] || METODO_ICONS.efectivo;
   const MetodoIcon = metodoInfo.icon;
 
@@ -165,8 +169,24 @@ export default function PaymentModal({
             </div>
           )}
 
-          {/* For non-cash methods */}
-          {!isEfectivo && (
+          {/* For nota de crédito */}
+          {isNotaCredito && (
+            <div className={`rounded-lg p-4 text-center border ${notaCreditoMonto >= total ? "bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800" : "bg-destructive/10 border-destructive/20"}`}>
+              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Crédito disponible del cliente</p>
+              <p className={`text-2xl font-bold ${notaCreditoMonto >= total ? "text-green-600 dark:text-green-400" : "text-destructive"}`}>
+                {fmt(notaCreditoMonto)}
+              </p>
+              {notaCreditoMonto < total && (
+                <p className="text-xs text-destructive mt-1">Crédito insuficiente. Faltan {fmt(total - notaCreditoMonto)}</p>
+              )}
+              {notaCreditoMonto >= total && notaCreditoMonto - total > 0 && (
+                <p className="text-xs text-muted-foreground mt-1">Crédito restante después: {fmt(notaCreditoMonto - total)}</p>
+              )}
+            </div>
+          )}
+
+          {/* For non-cash, non-NC methods */}
+          {!isEfectivo && !isNotaCredito && (
             <div className="rounded-lg p-4 text-center bg-muted/50 border border-border">
               <p className="text-sm text-muted-foreground">
                 Pago por {metodoInfo.label.toLowerCase()} — no requiere cambio
