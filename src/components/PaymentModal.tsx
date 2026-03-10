@@ -50,9 +50,10 @@ export default function PaymentModal({
   const [montoRecibido, setMontoRecibido] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   const isEfectivo = metodoPago === "efectivo";
+  const isNotaCredito = metodoPago === "nota_credito";
   const monto = parseFloat(montoRecibido) || 0;
   const cambio = monto - total;
-  const isValid = isEfectivo ? monto >= total : true;
+  const isValid = isNotaCredito ? notaCreditoMonto >= total : isEfectivo ? monto >= total : true;
   const metodoInfo = METODO_ICONS[metodoPago] || METODO_ICONS.efectivo;
   const MetodoIcon = metodoInfo.icon;
 
