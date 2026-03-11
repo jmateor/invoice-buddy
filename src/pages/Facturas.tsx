@@ -280,6 +280,15 @@ export default function Facturas() {
         </CardContent>
       </Card>
 
+      {previewFactura && (
+        <FacturaPreviewModal
+          open={!!previewFactura}
+          onOpenChange={o => { if (!o) setPreviewFactura(null); }}
+          factura={previewFactura}
+          negocio={negocio}
+        />
+      )}
+
       {ncModal && (
         <NotaCreditoModal
           open={!!ncModal}
