@@ -7,11 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Search, FileText, Ban, Download, Printer, MessageCircle, RotateCcw } from "lucide-react";
+import { Search, FileText, Ban, Download, Printer, MessageCircle, RotateCcw, Eye } from "lucide-react";
 import { Link } from "react-router-dom";
 import { generateInvoicePDF, type NegocioData } from "@/lib/generateInvoicePDF";
 import { exportToExcel } from "@/lib/exportUtils";
 import NotaCreditoModal from "@/components/NotaCreditoModal";
+import FacturaPreviewModal from "@/components/FacturaPreviewModal";
 
 interface Factura {
   id: string;
@@ -34,6 +35,7 @@ export default function Facturas() {
   const [negocio, setNegocio] = useState<NegocioData | null>(null);
   const [formatoImpresion, setFormatoImpresion] = useState<"carta" | "80mm" | "58mm">("carta");
   const [ncModal, setNcModal] = useState<{ facturaId: string; numero: string; clienteId: string; clienteNombre: string } | null>(null);
+  const [previewFactura, setPreviewFactura] = useState<Factura | null>(null);
 
   const load = async () => {
     const [facRes, negRes] = await Promise.all([
@@ -239,6 +241,9 @@ export default function Facturas() {
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => setPreviewFactura(f)} title="Ver factura">
+                        <Eye className="h-4 w-4" />
+                      </Button>
                       <Button variant="ghost" size="icon" onClick={() => handlePDF(f, "download")} title="Descargar PDF">
                         <Download className="h-4 w-4" />
                       </Button>
@@ -274,6 +279,15 @@ export default function Facturas() {
           </Table>
         </CardContent>
       </Card>
+
+      {previewFactura && (
+        <FacturaPreviewModal
+          open={!!previewFactura}
+          onOpenChange={o => { if (!o) setPreviewFactura(null); }}
+          factura={previewFactura}
+          negocio={negocio}
+        />
+      )}
 
       {ncModal && (
         <NotaCreditoModal
