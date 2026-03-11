@@ -12,6 +12,7 @@ import { Link } from "react-router-dom";
 import { generateInvoicePDF, type NegocioData } from "@/lib/generateInvoicePDF";
 import { exportToExcel } from "@/lib/exportUtils";
 import NotaCreditoModal from "@/components/NotaCreditoModal";
+import FacturaPreviewModal from "@/components/FacturaPreviewModal";
 
 interface Factura {
   id: string;
