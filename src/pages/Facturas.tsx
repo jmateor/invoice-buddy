@@ -260,7 +260,7 @@ export default function Facturas() {
                         <Button variant="ghost" size="icon" title="Nota de Crédito"
                           onClick={() => setNcModal({
                             facturaId: f.id, numero: f.numero,
-                            clienteId: (f as any).cliente_id || "",
+                            clienteId: f.cliente_id || "",
                             clienteNombre: f.clientes?.nombre || ""
                           })}
                         >
