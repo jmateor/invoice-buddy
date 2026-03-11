@@ -498,6 +498,7 @@ export type Database = {
           id: string
           motivo: string
           numero: string | null
+          saldo_disponible: number
           total: number
           usuario_id: string
         }
@@ -509,6 +510,7 @@ export type Database = {
           id?: string
           motivo: string
           numero?: string | null
+          saldo_disponible?: number
           total?: number
           usuario_id: string
         }
@@ -520,6 +522,7 @@ export type Database = {
           id?: string
           motivo?: string
           numero?: string | null
+          saldo_disponible?: number
           total?: number
           usuario_id?: string
         }
