@@ -25,6 +25,7 @@ interface Factura {
   metodo_pago: string;
   estado: string;
   notas: string | null;
+  cliente_id: string;
   clientes: { nombre: string; rnc_cedula: string | null; direccion: string | null; telefono: string | null; email: string | null } | null;
 }
 
@@ -259,7 +260,7 @@ export default function Facturas() {
                         <Button variant="ghost" size="icon" title="Nota de Crédito"
                           onClick={() => setNcModal({
                             facturaId: f.id, numero: f.numero,
-                            clienteId: (f as any).cliente_id || "",
+                            clienteId: f.cliente_id || "",
                             clienteNombre: f.clientes?.nombre || ""
                           })}
                         >

@@ -51,7 +51,11 @@ export default function NotaCreditoModal({ open, onOpenChange, facturaId, factur
       .from("detalle_facturas")
       .select("id, producto_id, cantidad, precio_unitario, itbis, subtotal, productos(nombre)")
       .eq("factura_id", facturaId)
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) {
+          console.error("Error loading invoice details:", error);
+          toast.error("Error al cargar los detalles de la factura");
+        }
         setDetalles((data as any) || []);
         setLoading(false);
       });
@@ -84,18 +88,19 @@ export default function NotaCreditoModal({ open, onOpenChange, facturaId, factur
     if (!motivo.trim()) { toast.error("Ingrese el motivo de la devolución"); return; }
     const items = detalles.filter(d => selected[d.id] !== undefined);
     if (items.length === 0) { toast.error("Seleccione al menos un producto"); return; }
+    if (!clienteId) { toast.error("No se pudo identificar el cliente"); return; }
 
     setSaving(true);
     try {
-      // Generate NC number
       const ncNumero = `NC-${Date.now().toString().slice(-8)}`;
 
-      // Create nota de crédito
+      // Create nota de crédito with saldo_disponible = total
       const { data: nota, error: notaErr } = await supabase.from("notas_credito").insert({
         factura_id: facturaId,
         cliente_id: clienteId,
         motivo,
         total: totalDevolucion,
+        saldo_disponible: totalDevolucion,
         usuario_id: user!.id,
         numero: ncNumero,
         estado: "pendiente",
@@ -182,6 +187,7 @@ export default function NotaCreditoModal({ open, onOpenChange, facturaId, factur
       onOpenChange(false);
       onCreated();
     } catch (err: any) {
+      console.error("Error creating credit note:", err);
       toast.error(err.message || "Error al crear nota de crédito");
     }
     setSaving(false);
@@ -218,6 +224,8 @@ export default function NotaCreditoModal({ open, onOpenChange, facturaId, factur
             <TableBody>
               {loading ? (
                 <TableRow><TableCell colSpan={5} className="text-center py-6 text-muted-foreground">Cargando...</TableCell></TableRow>
+              ) : detalles.length === 0 ? (
+                <TableRow><TableCell colSpan={5} className="text-center py-6 text-muted-foreground">No se encontraron detalles para esta factura</TableCell></TableRow>
               ) : detalles.map(d => {
                 const isSelected = selected[d.id] !== undefined;
                 const unitTotal = d.subtotal / d.cantidad;
@@ -255,7 +263,7 @@ export default function NotaCreditoModal({ open, onOpenChange, facturaId, factur
           </span>
         </div>
 
-        <Button onClick={handleSubmit} disabled={saving} className="w-full">
+        <Button onClick={handleSubmit} disabled={saving || detalles.length === 0} className="w-full">
           {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />}
           Generar e Imprimir Nota de Crédito
         </Button>

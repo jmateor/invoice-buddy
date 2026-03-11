@@ -39,6 +39,13 @@ interface LineaFactura {
   condiciones_garantia: string | null;
 }
 
+interface NotaCreditoDisponible {
+  id: string;
+  total: number;
+  saldo_disponible: number;
+  numero: string | null;
+}
+
 const ITBIS_RATE = 0.18;
 
 const COMPROBANTE_TYPES = [
@@ -68,7 +75,7 @@ export default function POS() {
   const [productSearch, setProductSearch] = useState("");
   const [clientSearch, setClientSearch] = useState("");
   const [paymentModalOpen, setPaymentModalOpen] = useState(false);
-  const [clienteNotasCredito, setClienteNotasCredito] = useState<{ id: string; total: number; numero: string | null }[]>([]);
+  const [clienteNotasCredito, setClienteNotasCredito] = useState<NotaCreditoDisponible[]>([]);
   const searchRef = useRef<HTMLInputElement>(null);
   const [negocio, setNegocio] = useState<NegocioData | null>(null);
   const [formatoImpresion, setFormatoImpresion] = useState<"carta" | "80mm" | "58mm">("80mm");
@@ -112,7 +119,6 @@ export default function POS() {
     setOrdenServicioId(state.ordenServicioId);
     setClienteId(state.clienteId || "");
 
-    // Add service line item directly (not from productos table)
     const precio = Number(state.servicioPrecio) || 0;
     const itbis = precio * ITBIS_RATE;
     setLineas([{
@@ -131,18 +137,20 @@ export default function POS() {
       setNotas(state.servicioNotas);
     }
 
-    // Clear location state to prevent re-loading on re-render
     window.history.replaceState({}, document.title);
   }, [location.state]);
 
-  // Fetch pending credit notes for selected client
+  // Fetch pending credit notes with saldo_disponible for selected client
   useEffect(() => {
     if (!clienteId) { setClienteNotasCredito([]); return; }
     supabase.from("notas_credito")
-      .select("id, total, numero")
+      .select("id, total, saldo_disponible, numero" as any)
       .eq("cliente_id", clienteId)
-      .eq("estado", "pendiente" as any)
-      .then(({ data }) => setClienteNotasCredito((data as any) || []));
+      .in("estado", ["pendiente", "parcial"] as any)
+      .gt("saldo_disponible", 0)
+      .then(({ data }) => {
+        setClienteNotasCredito((data as any) || []);
+      });
   }, [clienteId]);
 
   // Keyboard shortcut: focus search on F2
@@ -170,7 +178,6 @@ export default function POS() {
 
     const config = getPosConfig();
 
-    // Block if product (not service) and no stock
     if (prod.tipo !== "servicio" && prod.stock <= 0 && config.bloquear_sin_stock) {
       toast.error(`Sin stock disponible para "${prod.nombre}"`);
       return;
@@ -207,7 +214,6 @@ export default function POS() {
     const config = getPosConfig();
 
     setLineas(prevLineas => {
-      // First, get the line we're modifying to check stock
       const targetLine = prevLineas[idx];
       if (!targetLine) return prevLineas;
 
@@ -231,6 +237,9 @@ export default function POS() {
   const totalItbis = lineas.reduce((s, l) => s + l.itbis, 0);
   const desc = parseFloat(descuento) || 0;
   const total = subtotal + totalItbis - desc;
+
+  // Calculate total available credit from saldo_disponible
+  const totalCreditoDisponible = clienteNotasCredito.reduce((s, nc) => s + Number(nc.saldo_disponible), 0);
 
   const filteredProducts = productos.filter(p => {
     const matchesSearch = p.nombre.toLowerCase().includes(productSearch.toLowerCase()) ||
@@ -319,24 +328,47 @@ export default function POS() {
           .eq("id", ordenServicioId);
       }
 
-      // Consume credit notes if paying with nota_credito
+      // Consume credit notes if paying with nota_credito - with proper saldo tracking
       if (metodoPago === "nota_credito" && clienteNotasCredito.length > 0) {
         let remaining = total;
+        const usedNcIds: string[] = [];
+
         for (const nc of clienteNotasCredito) {
           if (remaining <= 0) break;
-          const ncTotal = Number(nc.total);
-          if (ncTotal <= remaining) {
+          const saldo = Number(nc.saldo_disponible);
+          
+          if (saldo <= remaining) {
             // Fully consume this NC
-            await supabase.from("notas_credito").update({ estado: "consumida" } as any).eq("id", nc.id);
-            remaining -= ncTotal;
+            await supabase.from("notas_credito").update({ 
+              saldo_disponible: 0, 
+              estado: "consumida" 
+            } as any).eq("id", nc.id);
+            remaining -= saldo;
           } else {
-            // Partially consume: update total to remainder, mark as consumed
-            await supabase.from("notas_credito").update({ estado: "consumida" } as any).eq("id", nc.id);
+            // Partially consume: deduct from saldo, mark as "parcial"
+            const nuevoSaldo = saldo - remaining;
+            await supabase.from("notas_credito").update({ 
+              saldo_disponible: nuevoSaldo, 
+              estado: "parcial" 
+            } as any).eq("id", nc.id);
             remaining = 0;
           }
+          usedNcIds.push(nc.id);
         }
-        // Link first NC to factura
-        await supabase.from("facturas").update({ nota_credito_id: clienteNotasCredito[0].id } as any).eq("id", factura.id);
+        
+        // Link first NC to factura for traceability
+        if (usedNcIds.length > 0) {
+          await supabase.from("facturas").update({ nota_credito_id: usedNcIds[0] } as any).eq("id", factura.id);
+        }
+
+        // Audit the NC consumption
+        await supabase.from("audit_logs").insert({
+          user_id: user!.id,
+          accion: "consumir_nota_credito",
+          entidad: "notas_credito",
+          entidad_id: usedNcIds[0] || "",
+          detalles: { factura_id: factura.id, factura_numero: numero, monto_aplicado: total, notas_usadas: usedNcIds },
+        } as any);
       }
 
       const cliente = clientes.find(c => c.id === clienteId);
@@ -364,6 +396,7 @@ export default function POS() {
       setDescuento("0");
       setNotas("");
       setProductSearch("");
+      setMetodoPago("efectivo");
       searchRef.current?.focus();
     } catch (err: any) {
       toast.error(err.message || "Error al crear factura");
@@ -425,7 +458,6 @@ export default function POS() {
                 onChange={e => setProductSearch(e.target.value)}
                 onKeyDown={e => {
                   if (e.key === "Enter") {
-                    // Barcode scanner match: exact codigo_barras or single result
                     const exactMatch = productos.find(p => p.codigo_barras === productSearch.trim());
                     if (exactMatch) {
                       addLinea(exactMatch.id);
@@ -568,6 +600,11 @@ export default function POS() {
                 <div className="p-2 rounded-md bg-primary/5 border border-primary/20 text-xs">
                   <p className="font-medium text-foreground">{selectedClient.nombre}</p>
                   {selectedClient.rnc_cedula && <p className="text-muted-foreground">RNC: {selectedClient.rnc_cedula}</p>}
+                  {clienteNotasCredito.length > 0 && (
+                    <p className="text-primary mt-0.5">
+                      💳 Crédito disponible: RD$ {totalCreditoDisponible.toLocaleString("es-DO", { minimumFractionDigits: 2 })}
+                    </p>
+                  )}
                 </div>
               ) : clientSearch && (
                 <ScrollArea className="max-h-32">
@@ -617,11 +654,11 @@ export default function POS() {
                   <p className="font-medium text-foreground">Créditos disponibles:</p>
                   {clienteNotasCredito.map(nc => (
                     <p key={nc.id} className="text-muted-foreground">
-                      {nc.numero || nc.id.slice(0, 8)} — RD$ {Number(nc.total).toLocaleString("es-DO", { minimumFractionDigits: 2 })}
+                      {nc.numero || nc.id.slice(0, 8)} — Saldo: RD$ {Number(nc.saldo_disponible).toLocaleString("es-DO", { minimumFractionDigits: 2 })}
                     </p>
                   ))}
                   <p className="font-medium text-primary">
-                    Total: RD$ {clienteNotasCredito.reduce((s, nc) => s + Number(nc.total), 0).toLocaleString("es-DO", { minimumFractionDigits: 2 })}
+                    Total disponible: RD$ {totalCreditoDisponible.toLocaleString("es-DO", { minimumFractionDigits: 2 })}
                   </p>
                 </div>
               )}
@@ -692,7 +729,7 @@ export default function POS() {
         metodoPago={metodoPago}
         onConfirm={handleSave}
         saving={saving}
-        notaCreditoMonto={clienteNotasCredito.reduce((s, nc) => s + Number(nc.total), 0)}
+        notaCreditoMonto={totalCreditoDisponible}
       />
     </div>
   );
