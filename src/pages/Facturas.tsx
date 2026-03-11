@@ -241,6 +241,9 @@ export default function Facturas() {
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => setPreviewFactura(f)} title="Ver factura">
+                        <Eye className="h-4 w-4" />
+                      </Button>
                       <Button variant="ghost" size="icon" onClick={() => handlePDF(f, "download")} title="Descargar PDF">
                         <Download className="h-4 w-4" />
                       </Button>
