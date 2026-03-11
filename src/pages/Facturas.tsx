@@ -25,6 +25,7 @@ interface Factura {
   metodo_pago: string;
   estado: string;
   notas: string | null;
+  cliente_id: string;
   clientes: { nombre: string; rnc_cedula: string | null; direccion: string | null; telefono: string | null; email: string | null } | null;
 }
 
