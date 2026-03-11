@@ -15,6 +15,7 @@ interface NotaCredito {
   numero: string | null;
   motivo: string;
   total: number;
+  saldo_disponible: number;
   estado: string;
   created_at: string;
   facturas: { numero: string } | null;
@@ -32,7 +33,7 @@ export default function NotasCredito() {
     const [notasRes, negRes] = await Promise.all([
       supabase
         .from("notas_credito")
-        .select("id, numero, motivo, total, estado, created_at, facturas(numero), clientes(nombre, rnc_cedula)")
+        .select("id, numero, motivo, total, saldo_disponible, estado, created_at, facturas(numero), clientes(nombre, rnc_cedula)" as any)
         .order("created_at", { ascending: false }),
       supabase
         .from("configuracion_negocio")
@@ -87,13 +88,19 @@ export default function NotasCredito() {
   const filtered = notas.filter(n =>
     (n.facturas?.numero || "").includes(search) ||
     (n.clientes?.nombre || "").toLowerCase().includes(search.toLowerCase()) ||
-    n.motivo.toLowerCase().includes(search.toLowerCase())
+    n.motivo.toLowerCase().includes(search.toLowerCase()) ||
+    (n.numero || "").toLowerCase().includes(search.toLowerCase())
   );
 
   const estadoBadge = (estado: string) => {
-    if (estado === "consumida") return <Badge variant="secondary">Consumida</Badge>;
-    return <Badge variant="default">Pendiente</Badge>;
+    switch (estado) {
+      case "consumida": return <Badge variant="secondary">Consumida</Badge>;
+      case "parcial": return <Badge className="bg-amber-500/15 text-amber-700 border-amber-300 hover:bg-amber-500/25">Parcial</Badge>;
+      default: return <Badge variant="default">Pendiente</Badge>;
+    }
   };
+
+  const fmt = (n: number) => `RD$ ${Number(n).toLocaleString("es-DO", { minimumFractionDigits: 2 })}`;
 
   return (
     <div className="animate-fade-in space-y-6">
@@ -105,7 +112,7 @@ export default function NotasCredito() {
       <div className="flex items-center gap-4">
         <div className="relative max-w-sm flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input className="pl-9" placeholder="Buscar por factura, cliente o motivo..." value={search} onChange={e => setSearch(e.target.value)} />
+          <Input className="pl-9" placeholder="Buscar por factura, cliente, NC# o motivo..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
         <div className="flex items-center gap-1.5 border border-border rounded-md p-1">
           <span className="text-xs text-muted-foreground px-1">Formato:</span>
@@ -135,13 +142,14 @@ export default function NotasCredito() {
                 <TableHead>Motivo</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead className="text-right">Total</TableHead>
+                <TableHead className="text-right">Saldo</TableHead>
                 <TableHead className="w-24">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                     <RotateCcw className="h-8 w-8 mx-auto mb-2 opacity-50" />
                     No hay notas de crédito
                   </TableCell>
@@ -154,8 +162,11 @@ export default function NotasCredito() {
                   <TableCell>{n.clientes?.nombre || "—"}</TableCell>
                   <TableCell className="text-sm max-w-[200px] truncate">{n.motivo}</TableCell>
                   <TableCell>{estadoBadge(n.estado)}</TableCell>
+                  <TableCell className="text-right font-medium">
+                    {fmt(n.total)}
+                  </TableCell>
                   <TableCell className="text-right font-bold text-primary">
-                    RD$ {Number(n.total).toLocaleString("es-DO", { minimumFractionDigits: 2 })}
+                    {fmt(n.saldo_disponible)}
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-1">
