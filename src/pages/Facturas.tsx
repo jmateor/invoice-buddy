@@ -1,12 +1,19 @@
 
 import { useEffect, useState } from "react";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
+import { CalendarIcon } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
+import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { Search, FileText, Ban, Download, Printer, MessageCircle, RotateCcw, Eye } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -39,6 +46,9 @@ export default function Facturas() {
   const [formatoImpresion, setFormatoImpresion] = useState<"carta" | "80mm" | "58mm">("carta");
   const [ncModal, setNcModal] = useState<{ facturaId: string; numero: string; clienteId: string; clienteNombre: string } | null>(null);
   const [previewFactura, setPreviewFactura] = useState<Factura | null>(null);
+  const [fechaDesde, setFechaDesde] = useState<Date | undefined>(undefined);
+  const [fechaHasta, setFechaHasta] = useState<Date | undefined>(undefined);
+  const [estadoFiltro, setEstadoFiltro] = useState<string>("todas");
 
   const load = async () => {
     const [facRes, negRes] = await Promise.all([
@@ -164,10 +174,15 @@ export default function Facturas() {
     toast.success("Exportado a Excel");
   };
 
-  const filtered = facturas.filter(f =>
-    f.numero.includes(search) ||
-    (f.clientes?.nombre || "").toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = facturas.filter(f => {
+    const matchSearch = f.numero.includes(search) ||
+      (f.clientes?.nombre || "").toLowerCase().includes(search.toLowerCase());
+    const fechaF = new Date(f.fecha);
+    const matchDesde = !fechaDesde || fechaF >= new Date(fechaDesde.setHours(0, 0, 0, 0));
+    const matchHasta = !fechaHasta || fechaF <= new Date(new Date(fechaHasta).setHours(23, 59, 59, 999));
+    const matchEstado = estadoFiltro === "todas" || f.estado === estadoFiltro;
+    return matchSearch && matchDesde && matchHasta && matchEstado;
+  });
 
   const metodoPagoLabel: Record<string, string> = { efectivo: "Efectivo", tarjeta: "Tarjeta", transferencia: "Transferencia" };
 
@@ -176,7 +191,7 @@ export default function Facturas() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Facturas</h1>
-          <p className="text-muted-foreground">{facturas.length} facturas registradas</p>
+          <p className="text-muted-foreground">{filtered.length} de {facturas.length} facturas</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleExport}><Download className="mr-2 h-4 w-4" />Exportar Excel</Button>
@@ -186,13 +201,54 @@ export default function Facturas() {
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="relative max-w-sm flex-1">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative max-w-sm flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input className="pl-9" placeholder="Buscar por número o cliente..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
-        {/* Format selector */}
-        <div className="flex items-center gap-1.5 border border-border rounded-md p-1">
+
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className={cn("w-[160px] justify-start text-left font-normal", !fechaDesde && "text-muted-foreground")}>
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {fechaDesde ? format(fechaDesde, "dd/MM/yyyy") : "Desde"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar mode="single" selected={fechaDesde} onSelect={setFechaDesde} initialFocus className="p-3 pointer-events-auto" locale={es} />
+          </PopoverContent>
+        </Popover>
+
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className={cn("w-[160px] justify-start text-left font-normal", !fechaHasta && "text-muted-foreground")}>
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {fechaHasta ? format(fechaHasta, "dd/MM/yyyy") : "Hasta"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar mode="single" selected={fechaHasta} onSelect={setFechaHasta} initialFocus className="p-3 pointer-events-auto" locale={es} />
+          </PopoverContent>
+        </Popover>
+
+        <Select value={estadoFiltro} onValueChange={setEstadoFiltro}>
+          <SelectTrigger className="w-[130px]">
+            <SelectValue placeholder="Estado" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todas">Todas</SelectItem>
+            <SelectItem value="activa">Activas</SelectItem>
+            <SelectItem value="anulada">Anuladas</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {(fechaDesde || fechaHasta || estadoFiltro !== "todas") && (
+          <Button variant="ghost" size="sm" onClick={() => { setFechaDesde(undefined); setFechaHasta(undefined); setEstadoFiltro("todas"); }}>
+            Limpiar filtros
+          </Button>
+        )}
+
+        <div className="flex items-center gap-1.5 border border-border rounded-md p-1 ml-auto">
           <span className="text-xs text-muted-foreground px-1">Formato:</span>
           {(["carta", "80mm", "58mm"] as const).map(fmt => (
             <Button
@@ -305,3 +361,5 @@ export default function Facturas() {
       )}
     </div>
   );
+
+}

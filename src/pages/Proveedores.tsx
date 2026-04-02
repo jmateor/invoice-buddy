@@ -160,3 +160,5 @@ export default function Proveedores() {
       </Card>
     </div>
   );
+
+}

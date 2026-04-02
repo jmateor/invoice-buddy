@@ -556,3 +556,5 @@ export default function Usuarios() {
       </Tabs>
     </div>
   );
+
+}
