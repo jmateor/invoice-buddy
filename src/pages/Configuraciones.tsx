@@ -249,7 +249,7 @@ import { traducirError } from "@/lib/errorTranslator";
 import { traducirError } from "@/lib/errorTranslator";
 
 import { traducirError } from "@/lib/errorTranslator";
-    if (error) toast.error(error.message);
+    if (error) toast.error(traducirError(error.message));
 import { traducirError } from "@/lib/errorTranslator";
     else {
 import { traducirError } from "@/lib/errorTranslator";
@@ -277,7 +277,7 @@ import { traducirError } from "@/lib/errorTranslator";
 import { traducirError } from "@/lib/errorTranslator";
       .eq("id", seq.id);
 import { traducirError } from "@/lib/errorTranslator";
-    if (error) toast.error(error.message);
+    if (error) toast.error(traducirError(error.message));
 import { traducirError } from "@/lib/errorTranslator";
     else toast.success("Secuencia actualizada");
 import { traducirError } from "@/lib/errorTranslator";
@@ -301,7 +301,7 @@ import { traducirError } from "@/lib/errorTranslator";
 import { traducirError } from "@/lib/errorTranslator";
     } as any);
 import { traducirError } from "@/lib/errorTranslator";
-    if (error) toast.error(error.message);
+    if (error) toast.error(traducirError(error.message));
 import { traducirError } from "@/lib/errorTranslator";
     else { toast.success(`Secuencia ${tipo} creada`); loadData(); }
 import { traducirError } from "@/lib/errorTranslator";

@@ -257,7 +257,7 @@ import { traducirError } from "@/lib/errorTranslator";
 import { traducirError } from "@/lib/errorTranslator";
     if (error) {
 import { traducirError } from "@/lib/errorTranslator";
-      toast.error(error.message);
+      toast.error(traducirError(error.message));
 import { traducirError } from "@/lib/errorTranslator";
     } else {
 import { traducirError } from "@/lib/errorTranslator";
@@ -347,7 +347,7 @@ import { traducirError } from "@/lib/errorTranslator";
 import { traducirError } from "@/lib/errorTranslator";
     if (error) {
 import { traducirError } from "@/lib/errorTranslator";
-      toast.error(error.message);
+      toast.error(traducirError(error.message));
 import { traducirError } from "@/lib/errorTranslator";
     } else {
 import { traducirError } from "@/lib/errorTranslator";
@@ -431,7 +431,7 @@ import { traducirError } from "@/lib/errorTranslator";
 import { traducirError } from "@/lib/errorTranslator";
     if (error) {
 import { traducirError } from "@/lib/errorTranslator";
-      toast.error(error.message);
+      toast.error(traducirError(error.message));
 import { traducirError } from "@/lib/errorTranslator";
     } else {
 import { traducirError } from "@/lib/errorTranslator";
@@ -475,7 +475,7 @@ import { traducirError } from "@/lib/errorTranslator";
 import { traducirError } from "@/lib/errorTranslator";
     if (error) {
 import { traducirError } from "@/lib/errorTranslator";
-      toast.error(error.message);
+      toast.error(traducirError(error.message));
 import { traducirError } from "@/lib/errorTranslator";
     } else {
 import { traducirError } from "@/lib/errorTranslator";

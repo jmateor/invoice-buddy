@@ -71,7 +71,7 @@ import { traducirError } from "@/lib/errorTranslator";
 import { traducirError } from "@/lib/errorTranslator";
       const { error } = await supabase.from("categorias").update({ nombre, descripcion: descripcion || null } as any).eq("id", editing);
 import { traducirError } from "@/lib/errorTranslator";
-      if (error) { toast.error(error.message); return; }
+      if (error) { toast.error(traducirError(error.message)); return; }
 import { traducirError } from "@/lib/errorTranslator";
       toast.success("Categoría actualizada");
 import { traducirError } from "@/lib/errorTranslator";
@@ -93,7 +93,7 @@ import { traducirError } from "@/lib/errorTranslator";
 import { traducirError } from "@/lib/errorTranslator";
       const { data, error } = await supabase.from("categorias").insert({ nombre, descripcion: descripcion || null, user_id: user!.id } as any).select("id").single();
 import { traducirError } from "@/lib/errorTranslator";
-      if (error) { toast.error(error.message); return; }
+      if (error) { toast.error(traducirError(error.message)); return; }
 import { traducirError } from "@/lib/errorTranslator";
       toast.success("Categoría creada");
 import { traducirError } from "@/lib/errorTranslator";
@@ -139,7 +139,7 @@ import { traducirError } from "@/lib/errorTranslator";
 import { traducirError } from "@/lib/errorTranslator";
     const { error } = await supabase.from("categorias").delete().eq("id", id);
 import { traducirError } from "@/lib/errorTranslator";
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(traducirError(error.message)); return; }
 import { traducirError } from "@/lib/errorTranslator";
     toast.success("Categoría eliminada");
 import { traducirError } from "@/lib/errorTranslator";

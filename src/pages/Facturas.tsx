@@ -133,7 +133,7 @@ import { traducirError } from "@/lib/errorTranslator";
 import { traducirError } from "@/lib/errorTranslator";
     const { error } = await supabase.from("facturas").update({ estado: "anulada" as any }).eq("id", id);
 import { traducirError } from "@/lib/errorTranslator";
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(traducirError(error.message)); return; }
 import { traducirError } from "@/lib/errorTranslator";
     toast.success("Factura anulada");
 import { traducirError } from "@/lib/errorTranslator";

@@ -77,7 +77,7 @@ import { traducirError } from "@/lib/errorTranslator";
 import { traducirError } from "@/lib/errorTranslator";
       const { error } = await supabase.from("proveedores").update(payload).eq("id", editing);
 import { traducirError } from "@/lib/errorTranslator";
-      if (error) { toast.error(error.message); return; }
+      if (error) { toast.error(traducirError(error.message)); return; }
 import { traducirError } from "@/lib/errorTranslator";
       toast.success("Proveedor actualizado");
 import { traducirError } from "@/lib/errorTranslator";
@@ -99,7 +99,7 @@ import { traducirError } from "@/lib/errorTranslator";
 import { traducirError } from "@/lib/errorTranslator";
       const { data, error } = await supabase.from("proveedores").insert({ ...payload, user_id: user!.id }).select("id").single();
 import { traducirError } from "@/lib/errorTranslator";
-      if (error) { toast.error(error.message); return; }
+      if (error) { toast.error(traducirError(error.message)); return; }
 import { traducirError } from "@/lib/errorTranslator";
       toast.success("Proveedor creado");
 import { traducirError } from "@/lib/errorTranslator";
@@ -143,7 +143,7 @@ import { traducirError } from "@/lib/errorTranslator";
 import { traducirError } from "@/lib/errorTranslator";
     const { error } = await supabase.from("proveedores").delete().eq("id", id);
 import { traducirError } from "@/lib/errorTranslator";
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(traducirError(error.message)); return; }
 import { traducirError } from "@/lib/errorTranslator";
     toast.success("Proveedor eliminado");
 import { traducirError } from "@/lib/errorTranslator";

@@ -197,7 +197,7 @@ import { traducirError } from "@/lib/errorTranslator";
 import { traducirError } from "@/lib/errorTranslator";
       const { error } = await supabase.from("productos").update(payload as any).eq("id", editing);
 import { traducirError } from "@/lib/errorTranslator";
-      if (error) { toast.error(error.message); return; }
+      if (error) { toast.error(traducirError(error.message)); return; }
 import { traducirError } from "@/lib/errorTranslator";
       toast.success("Producto actualizado");
 import { traducirError } from "@/lib/errorTranslator";
@@ -227,7 +227,7 @@ import { traducirError } from "@/lib/errorTranslator";
 import { traducirError } from "@/lib/errorTranslator";
         } else {
 import { traducirError } from "@/lib/errorTranslator";
-          toast.error(error.message);
+          toast.error(traducirError(error.message));
 import { traducirError } from "@/lib/errorTranslator";
         }
 import { traducirError } from "@/lib/errorTranslator";
@@ -307,7 +307,7 @@ import { traducirError } from "@/lib/errorTranslator";
 import { traducirError } from "@/lib/errorTranslator";
     const { error } = await supabase.from("productos").delete().eq("id", id);
 import { traducirError } from "@/lib/errorTranslator";
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(traducirError(error.message)); return; }
 import { traducirError } from "@/lib/errorTranslator";
     toast.success("Producto eliminado");
 import { traducirError } from "@/lib/errorTranslator";

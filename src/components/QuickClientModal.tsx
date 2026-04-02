@@ -51,7 +51,7 @@ import { traducirError } from "@/lib/errorTranslator";
 import { traducirError } from "@/lib/errorTranslator";
     setSaving(false);
 import { traducirError } from "@/lib/errorTranslator";
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(traducirError(error.message)); return; }
 import { traducirError } from "@/lib/errorTranslator";
     toast.success("Cliente creado");
 import { traducirError } from "@/lib/errorTranslator";

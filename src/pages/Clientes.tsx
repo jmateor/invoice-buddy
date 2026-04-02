@@ -76,7 +76,7 @@ import { traducirError } from "@/lib/errorTranslator";
 import { traducirError } from "@/lib/errorTranslator";
       const { error } = await supabase.from("clientes").update(form).eq("id", editing);
 import { traducirError } from "@/lib/errorTranslator";
-      if (error) { toast.error(error.message); return; }
+      if (error) { toast.error(traducirError(error.message)); return; }
 import { traducirError } from "@/lib/errorTranslator";
       toast.success("Cliente actualizado");
 import { traducirError } from "@/lib/errorTranslator";
@@ -98,7 +98,7 @@ import { traducirError } from "@/lib/errorTranslator";
 import { traducirError } from "@/lib/errorTranslator";
       const { data, error } = await supabase.from("clientes").insert({ ...form, user_id: user!.id }).select("id").single();
 import { traducirError } from "@/lib/errorTranslator";
-      if (error) { toast.error(error.message); return; }
+      if (error) { toast.error(traducirError(error.message)); return; }
 import { traducirError } from "@/lib/errorTranslator";
       toast.success("Cliente creado");
 import { traducirError } from "@/lib/errorTranslator";
@@ -148,7 +148,7 @@ import { traducirError } from "@/lib/errorTranslator";
 import { traducirError } from "@/lib/errorTranslator";
     const { error } = await supabase.from("clientes").delete().eq("id", id);
 import { traducirError } from "@/lib/errorTranslator";
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(traducirError(error.message)); return; }
 import { traducirError } from "@/lib/errorTranslator";
     toast.success("Cliente eliminado");
 import { traducirError } from "@/lib/errorTranslator";
