@@ -174,10 +174,15 @@ export default function Facturas() {
     toast.success("Exportado a Excel");
   };
 
-  const filtered = facturas.filter(f =>
-    f.numero.includes(search) ||
-    (f.clientes?.nombre || "").toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = facturas.filter(f => {
+    const matchSearch = f.numero.includes(search) ||
+      (f.clientes?.nombre || "").toLowerCase().includes(search.toLowerCase());
+    const fechaF = new Date(f.fecha);
+    const matchDesde = !fechaDesde || fechaF >= new Date(fechaDesde.setHours(0, 0, 0, 0));
+    const matchHasta = !fechaHasta || fechaF <= new Date(new Date(fechaHasta).setHours(23, 59, 59, 999));
+    const matchEstado = estadoFiltro === "todas" || f.estado === estadoFiltro;
+    return matchSearch && matchDesde && matchHasta && matchEstado;
+  });
 
   const metodoPagoLabel: Record<string, string> = { efectivo: "Efectivo", tarjeta: "Tarjeta", transferencia: "Transferencia" };
 
