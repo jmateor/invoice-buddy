@@ -191,7 +191,7 @@ export default function Facturas() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Facturas</h1>
-          <p className="text-muted-foreground">{facturas.length} facturas registradas</p>
+          <p className="text-muted-foreground">{filtered.length} de {facturas.length} facturas</p>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleExport}><Download className="mr-2 h-4 w-4" />Exportar Excel</Button>
