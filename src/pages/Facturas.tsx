@@ -46,6 +46,9 @@ export default function Facturas() {
   const [formatoImpresion, setFormatoImpresion] = useState<"carta" | "80mm" | "58mm">("carta");
   const [ncModal, setNcModal] = useState<{ facturaId: string; numero: string; clienteId: string; clienteNombre: string } | null>(null);
   const [previewFactura, setPreviewFactura] = useState<Factura | null>(null);
+  const [fechaDesde, setFechaDesde] = useState<Date | undefined>(undefined);
+  const [fechaHasta, setFechaHasta] = useState<Date | undefined>(undefined);
+  const [estadoFiltro, setEstadoFiltro] = useState<string>("todas");
 
   const load = async () => {
     const [facRes, negRes] = await Promise.all([
