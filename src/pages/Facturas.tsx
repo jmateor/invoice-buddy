@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,6 +14,7 @@ import { generateInvoicePDF, type NegocioData } from "@/lib/generateInvoicePDF";
 import { exportToExcel } from "@/lib/exportUtils";
 import NotaCreditoModal from "@/components/NotaCreditoModal";
 import FacturaPreviewModal from "@/components/FacturaPreviewModal";
+import { traducirError } from "@/lib/errorTranslator";
 
 interface Factura {
   id: string;
@@ -72,7 +74,7 @@ export default function Facturas() {
   const handleAnular = async (id: string) => {
     if (!confirm("¿Anular esta factura?")) return;
     const { error } = await supabase.from("facturas").update({ estado: "anulada" as any }).eq("id", id);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(traducirError(error.message)); return; }
     toast.success("Factura anulada");
     await supabase.from("audit_logs").insert({
       user_id: user!.id,
@@ -303,4 +305,3 @@ export default function Facturas() {
       )}
     </div>
   );
-}

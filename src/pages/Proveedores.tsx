@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -9,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Search, Truck } from "lucide-react";
+import { traducirError } from "@/lib/errorTranslator";
 
 interface Proveedor {
   id: string;
@@ -42,7 +44,7 @@ export default function Proveedores() {
 
     if (editing) {
       const { error } = await supabase.from("proveedores").update(payload).eq("id", editing);
-      if (error) { toast.error(error.message); return; }
+      if (error) { toast.error(traducirError(error.message)); return; }
       toast.success("Proveedor actualizado");
       await supabase.from("audit_logs").insert({
         user_id: user!.id,
@@ -53,7 +55,7 @@ export default function Proveedores() {
       } as any);
     } else {
       const { data, error } = await supabase.from("proveedores").insert({ ...payload, user_id: user!.id }).select("id").single();
-      if (error) { toast.error(error.message); return; }
+      if (error) { toast.error(traducirError(error.message)); return; }
       toast.success("Proveedor creado");
       await supabase.from("audit_logs").insert({
         user_id: user!.id,
@@ -75,7 +77,7 @@ export default function Proveedores() {
   const handleDelete = async (id: string) => {
     if (!confirm("¿Eliminar este proveedor?")) return;
     const { error } = await supabase.from("proveedores").delete().eq("id", id);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(traducirError(error.message)); return; }
     toast.success("Proveedor eliminado");
     await supabase.from("audit_logs").insert({
       user_id: user!.id,
@@ -158,4 +160,3 @@ export default function Proveedores() {
       </Card>
     </div>
   );
-}

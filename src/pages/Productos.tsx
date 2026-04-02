@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -15,6 +16,7 @@ import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Search, Package, AlertTriangle, ShieldCheck, Wrench, Barcode, Printer, ClipboardList } from "lucide-react";
 import BarcodePrintModal from "@/components/BarcodePrintModal";
 import KardexModal from "@/components/KardexModal";
+import { traducirError } from "@/lib/errorTranslator";
 
 interface Categoria {
   id: string;
@@ -105,7 +107,7 @@ export default function Productos() {
 
     if (editing) {
       const { error } = await supabase.from("productos").update(payload as any).eq("id", editing);
-      if (error) { toast.error(error.message); return; }
+      if (error) { toast.error(traducirError(error.message)); return; }
       toast.success("Producto actualizado");
       await supabase.from("audit_logs").insert({
         user_id: user!.id,
@@ -120,7 +122,7 @@ export default function Productos() {
         if (error.message.includes("duplicate") || error.message.includes("unique")) {
           toast.error("El código de barras ya existe. Intente con otro.");
         } else {
-          toast.error(error.message);
+          toast.error(traducirError(error.message));
         }
         return;
       }
@@ -160,7 +162,7 @@ export default function Productos() {
   const handleDelete = async (id: string) => {
     if (!confirm("¿Eliminar este producto?")) return;
     const { error } = await supabase.from("productos").delete().eq("id", id);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(traducirError(error.message)); return; }
     toast.success("Producto eliminado");
     await supabase.from("audit_logs").insert({
       user_id: user!.id,
@@ -433,4 +435,3 @@ export default function Productos() {
       )}
     </div>
   );
-}

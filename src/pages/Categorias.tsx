@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -9,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Search, Tags } from "lucide-react";
+import { traducirError } from "@/lib/errorTranslator";
 
 interface Categoria {
   id: string;
@@ -39,7 +41,7 @@ export default function Categorias() {
 
     if (editing) {
       const { error } = await supabase.from("categorias").update({ nombre, descripcion: descripcion || null } as any).eq("id", editing);
-      if (error) { toast.error(error.message); return; }
+      if (error) { toast.error(traducirError(error.message)); return; }
       toast.success("Categoría actualizada");
       await supabase.from("audit_logs").insert({
         user_id: user!.id,
@@ -50,7 +52,7 @@ export default function Categorias() {
       } as any);
     } else {
       const { data, error } = await supabase.from("categorias").insert({ nombre, descripcion: descripcion || null, user_id: user!.id } as any).select("id").single();
-      if (error) { toast.error(error.message); return; }
+      if (error) { toast.error(traducirError(error.message)); return; }
       toast.success("Categoría creada");
       await supabase.from("audit_logs").insert({
         user_id: user!.id,
@@ -73,7 +75,7 @@ export default function Categorias() {
   const handleDelete = async (id: string) => {
     if (!confirm("¿Eliminar esta categoría? Los productos asociados quedarán sin categoría.")) return;
     const { error } = await supabase.from("categorias").delete().eq("id", id);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(traducirError(error.message)); return; }
     toast.success("Categoría eliminada");
     await supabase.from("audit_logs").insert({
       user_id: user!.id,
@@ -164,4 +166,3 @@ export default function Categorias() {
       </Card>
     </div>
   );
-}

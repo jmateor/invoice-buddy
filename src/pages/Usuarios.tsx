@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -20,6 +21,7 @@ import {
 } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { createClient } from "@supabase/supabase-js";
+import { traducirError } from "@/lib/errorTranslator";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || "";
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || "";
@@ -136,7 +138,7 @@ export default function Usuarios() {
       ({ error } = await supabase.from("user_roles").insert({ user_id: userId, role: newRole } as any));
     }
     if (error) {
-      toast.error(error.message);
+      toast.error(traducirError(error.message));
     } else {
       toast.success("Rol actualizado");
       await supabase.from("audit_logs").insert({
@@ -181,7 +183,7 @@ export default function Usuarios() {
       options: { data: { nombre: newUser.nombre, role: newUser.role } },
     });
     if (error) {
-      toast.error(error.message);
+      toast.error(traducirError(error.message));
     } else {
       const newUserId = data.user?.id;
       let avatarUrl = "";
@@ -223,7 +225,7 @@ export default function Usuarios() {
       nombre: editForm.nombre, cedula: editForm.cedula, avatar_url: avatarUrl,
     } as any).eq("user_id", editingProfile.user_id);
     if (error) {
-      toast.error(error.message);
+      toast.error(traducirError(error.message));
     } else {
       toast.success("Usuario actualizado");
       await supabase.from("audit_logs").insert({
@@ -245,7 +247,7 @@ export default function Usuarios() {
     };
     const { error } = await supabase.from("profiles").update(updateData).eq("user_id", p.user_id);
     if (error) {
-      toast.error(error.message);
+      toast.error(traducirError(error.message));
     } else {
       toast.success(newStatus ? "Usuario reactivado" : "Usuario desactivado");
       await supabase.from("audit_logs").insert({
@@ -554,4 +556,3 @@ export default function Usuarios() {
       </Tabs>
     </div>
   );
-}

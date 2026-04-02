@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -7,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { traducirError } from "@/lib/errorTranslator";
 
 interface Props {
   open: boolean;
@@ -28,7 +30,7 @@ export default function QuickClientModal({ open, onOpenChange, onCreated }: Prop
       .select("id, nombre, rnc_cedula")
       .single();
     setSaving(false);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(traducirError(error.message)); return; }
     toast.success("Cliente creado");
     onCreated(data);
     setForm({ nombre: "", rnc_cedula: "", telefono: "", email: "", direccion: "" });
@@ -66,4 +68,3 @@ export default function QuickClientModal({ open, onOpenChange, onCreated }: Prop
       </DialogContent>
     </Dialog>
   );
-}

@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -13,6 +14,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Save, Building2, Settings2, Hash, Loader2, Printer, Package, ShieldAlert, MonitorSmartphone } from "lucide-react";
+import { traducirError } from "@/lib/errorTranslator";
 
 interface Config {
   nombre_comercial: string;
@@ -130,7 +132,7 @@ export default function Configuraciones() {
       error = insErr;
     }
 
-    if (error) toast.error(error.message);
+    if (error) toast.error(traducirError(error.message));
     else {
       toast.success("Configuración guardada");
       await supabase.from("audit_logs").insert({
@@ -144,7 +146,7 @@ export default function Configuraciones() {
     const { error } = await supabase.from("ncf_secuencias")
       .update({ secuencia_limite: seq.secuencia_limite, activo: seq.activo } as any)
       .eq("id", seq.id);
-    if (error) toast.error(error.message);
+    if (error) toast.error(traducirError(error.message));
     else toast.success("Secuencia actualizada");
   };
 
@@ -156,7 +158,7 @@ export default function Configuraciones() {
       secuencia_limite: 999999,
       prefijo: tipo,
     } as any);
-    if (error) toast.error(error.message);
+    if (error) toast.error(traducirError(error.message));
     else { toast.success(`Secuencia ${tipo} creada`); loadData(); }
   };
 
@@ -456,4 +458,3 @@ export default function Configuraciones() {
       </Tabs>
     </div>
   );
-}

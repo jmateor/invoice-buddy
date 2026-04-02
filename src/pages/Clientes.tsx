@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
@@ -10,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Search, Users, Mail, MessageCircle, Download } from "lucide-react";
 import * as XLSX from "xlsx";
+import { traducirError } from "@/lib/errorTranslator";
 
 interface Cliente {
   id: string;
@@ -42,7 +44,7 @@ export default function Clientes() {
 
     if (editing) {
       const { error } = await supabase.from("clientes").update(form).eq("id", editing);
-      if (error) { toast.error(error.message); return; }
+      if (error) { toast.error(traducirError(error.message)); return; }
       toast.success("Cliente actualizado");
       await supabase.from("audit_logs").insert({
         user_id: user!.id,
@@ -53,7 +55,7 @@ export default function Clientes() {
       } as any);
     } else {
       const { data, error } = await supabase.from("clientes").insert({ ...form, user_id: user!.id }).select("id").single();
-      if (error) { toast.error(error.message); return; }
+      if (error) { toast.error(traducirError(error.message)); return; }
       toast.success("Cliente creado");
       await supabase.from("audit_logs").insert({
         user_id: user!.id,
@@ -78,7 +80,7 @@ export default function Clientes() {
   const handleDelete = async (id: string) => {
     if (!confirm("¿Eliminar este cliente?")) return;
     const { error } = await supabase.from("clientes").delete().eq("id", id);
-    if (error) { toast.error(error.message); return; }
+    if (error) { toast.error(traducirError(error.message)); return; }
     toast.success("Cliente eliminado");
     await supabase.from("audit_logs").insert({
       user_id: user!.id,
@@ -219,4 +221,3 @@ export default function Clientes() {
       </Card>
     </div>
   );
-}

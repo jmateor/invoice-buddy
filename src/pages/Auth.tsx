@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { FileText, Loader2 } from "lucide-react";
+import { traducirError } from "@/lib/errorTranslator";
 
 export default function Auth() {
   const [loading, setLoading] = useState(false);
@@ -18,7 +20,7 @@ export default function Auth() {
     e.preventDefault();
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) toast.error(error.message);
+    if (error) toast.error(traducirError(error.message));
     else toast.success("¡Bienvenido!");
     setLoading(false);
   };
@@ -34,7 +36,7 @@ export default function Auth() {
         emailRedirectTo: window.location.origin,
       },
     });
-    if (error) toast.error(error.message);
+    if (error) toast.error(traducirError(error.message));
     else toast.success("Revisa tu email para confirmar tu cuenta");
     setLoading(false);
   };
@@ -104,4 +106,3 @@ export default function Auth() {
       </div>
     </div>
   );
-}
