@@ -201,13 +201,54 @@ export default function Facturas() {
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="relative max-w-sm flex-1">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative max-w-sm flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input className="pl-9" placeholder="Buscar por número o cliente..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
-        {/* Format selector */}
-        <div className="flex items-center gap-1.5 border border-border rounded-md p-1">
+
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className={cn("w-[160px] justify-start text-left font-normal", !fechaDesde && "text-muted-foreground")}>
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {fechaDesde ? format(fechaDesde, "dd/MM/yyyy") : "Desde"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar mode="single" selected={fechaDesde} onSelect={setFechaDesde} initialFocus className="p-3 pointer-events-auto" locale={es} />
+          </PopoverContent>
+        </Popover>
+
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" className={cn("w-[160px] justify-start text-left font-normal", !fechaHasta && "text-muted-foreground")}>
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              {fechaHasta ? format(fechaHasta, "dd/MM/yyyy") : "Hasta"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar mode="single" selected={fechaHasta} onSelect={setFechaHasta} initialFocus className="p-3 pointer-events-auto" locale={es} />
+          </PopoverContent>
+        </Popover>
+
+        <Select value={estadoFiltro} onValueChange={setEstadoFiltro}>
+          <SelectTrigger className="w-[130px]">
+            <SelectValue placeholder="Estado" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todas">Todas</SelectItem>
+            <SelectItem value="activa">Activas</SelectItem>
+            <SelectItem value="anulada">Anuladas</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {(fechaDesde || fechaHasta || estadoFiltro !== "todas") && (
+          <Button variant="ghost" size="sm" onClick={() => { setFechaDesde(undefined); setFechaHasta(undefined); setEstadoFiltro("todas"); }}>
+            Limpiar filtros
+          </Button>
+        )}
+
+        <div className="flex items-center gap-1.5 border border-border rounded-md p-1 ml-auto">
           <span className="text-xs text-muted-foreground px-1">Formato:</span>
           {(["carta", "80mm", "58mm"] as const).map(fmt => (
             <Button
