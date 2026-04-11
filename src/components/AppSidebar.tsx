@@ -19,6 +19,7 @@ import {
   Package,
   FileText,
   Truck,
+  Stamp,
   BarChart3,
   LogOut,
   ShoppingCart,
@@ -40,6 +41,7 @@ const mainItems = [
   { title: "Categorías", url: "/categorias", icon: Tags },
   { title: "Facturas", url: "/facturas", icon: FileText },
   { title: "Notas de Crédito", url: "/notas-credito", icon: RotateCcw },
+  { title: "e-CF (DGII)", url: "/comprobantes-electronicos", icon: Stamp },
 ];
 
 const secondaryItems = [
