@@ -337,6 +337,266 @@ export type Database = {
           },
         ]
       }
+      ecf_configuracion: {
+        Row: {
+          activo: boolean
+          ambiente: string
+          certificado_nombre: string | null
+          certificado_vigencia_hasta: string | null
+          created_at: string
+          direccion: string | null
+          email: string | null
+          id: string
+          municipio: string | null
+          nombre_comercial: string | null
+          provincia: string | null
+          razon_social: string
+          rnc: string
+          telefono: string | null
+          updated_at: string
+          url_anulacion: string | null
+          url_aprobacion_comercial: string | null
+          url_autenticacion: string | null
+          url_consulta_estado: string | null
+          url_recepcion: string | null
+          user_id: string
+        }
+        Insert: {
+          activo?: boolean
+          ambiente?: string
+          certificado_nombre?: string | null
+          certificado_vigencia_hasta?: string | null
+          created_at?: string
+          direccion?: string | null
+          email?: string | null
+          id?: string
+          municipio?: string | null
+          nombre_comercial?: string | null
+          provincia?: string | null
+          razon_social: string
+          rnc: string
+          telefono?: string | null
+          updated_at?: string
+          url_anulacion?: string | null
+          url_aprobacion_comercial?: string | null
+          url_autenticacion?: string | null
+          url_consulta_estado?: string | null
+          url_recepcion?: string | null
+          user_id: string
+        }
+        Update: {
+          activo?: boolean
+          ambiente?: string
+          certificado_nombre?: string | null
+          certificado_vigencia_hasta?: string | null
+          created_at?: string
+          direccion?: string | null
+          email?: string | null
+          id?: string
+          municipio?: string | null
+          nombre_comercial?: string | null
+          provincia?: string | null
+          razon_social?: string
+          rnc?: string
+          telefono?: string | null
+          updated_at?: string
+          url_anulacion?: string | null
+          url_aprobacion_comercial?: string | null
+          url_autenticacion?: string | null
+          url_consulta_estado?: string | null
+          url_recepcion?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ecf_documentos: {
+        Row: {
+          ambiente: string
+          codigo_respuesta: string | null
+          created_at: string
+          encf: string
+          estado_dgii: string
+          factura_id: string | null
+          fecha_anulacion: string | null
+          fecha_emision: string
+          fecha_envio: string | null
+          fecha_respuesta: string | null
+          hash_firma: string | null
+          id: string
+          intentos_envio: number
+          mensaje_dgii: string | null
+          monto_itbis: number
+          monto_subtotal: number
+          monto_total: number
+          nota_credito_id: string | null
+          receptor_nombre: string | null
+          receptor_rnc: string | null
+          tipo_ecf: string
+          track_id: string | null
+          updated_at: string
+          user_id: string
+          xml_firmado: string | null
+          xml_sin_firma: string | null
+        }
+        Insert: {
+          ambiente?: string
+          codigo_respuesta?: string | null
+          created_at?: string
+          encf: string
+          estado_dgii?: string
+          factura_id?: string | null
+          fecha_anulacion?: string | null
+          fecha_emision?: string
+          fecha_envio?: string | null
+          fecha_respuesta?: string | null
+          hash_firma?: string | null
+          id?: string
+          intentos_envio?: number
+          mensaje_dgii?: string | null
+          monto_itbis?: number
+          monto_subtotal?: number
+          monto_total?: number
+          nota_credito_id?: string | null
+          receptor_nombre?: string | null
+          receptor_rnc?: string | null
+          tipo_ecf: string
+          track_id?: string | null
+          updated_at?: string
+          user_id: string
+          xml_firmado?: string | null
+          xml_sin_firma?: string | null
+        }
+        Update: {
+          ambiente?: string
+          codigo_respuesta?: string | null
+          created_at?: string
+          encf?: string
+          estado_dgii?: string
+          factura_id?: string | null
+          fecha_anulacion?: string | null
+          fecha_emision?: string
+          fecha_envio?: string | null
+          fecha_respuesta?: string | null
+          hash_firma?: string | null
+          id?: string
+          intentos_envio?: number
+          mensaje_dgii?: string | null
+          monto_itbis?: number
+          monto_subtotal?: number
+          monto_total?: number
+          nota_credito_id?: string | null
+          receptor_nombre?: string | null
+          receptor_rnc?: string | null
+          tipo_ecf?: string
+          track_id?: string | null
+          updated_at?: string
+          user_id?: string
+          xml_firmado?: string | null
+          xml_sin_firma?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ecf_documentos_factura_id_fkey"
+            columns: ["factura_id"]
+            isOneToOne: false
+            referencedRelation: "facturas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ecf_documentos_nota_credito_id_fkey"
+            columns: ["nota_credito_id"]
+            isOneToOne: false
+            referencedRelation: "notas_credito"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ecf_historial_estados: {
+        Row: {
+          codigo_respuesta: string | null
+          created_at: string
+          datos_respuesta: Json | null
+          ecf_documento_id: string
+          estado_anterior: string | null
+          estado_nuevo: string
+          id: string
+          mensaje: string | null
+          user_id: string
+        }
+        Insert: {
+          codigo_respuesta?: string | null
+          created_at?: string
+          datos_respuesta?: Json | null
+          ecf_documento_id: string
+          estado_anterior?: string | null
+          estado_nuevo: string
+          id?: string
+          mensaje?: string | null
+          user_id: string
+        }
+        Update: {
+          codigo_respuesta?: string | null
+          created_at?: string
+          datos_respuesta?: Json | null
+          ecf_documento_id?: string
+          estado_anterior?: string | null
+          estado_nuevo?: string
+          id?: string
+          mensaje?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ecf_historial_estados_ecf_documento_id_fkey"
+            columns: ["ecf_documento_id"]
+            isOneToOne: false
+            referencedRelation: "ecf_documentos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ecf_secuencias: {
+        Row: {
+          activo: boolean
+          created_at: string
+          fecha_vencimiento: string | null
+          id: string
+          prefijo: string
+          secuencia_actual: number
+          secuencia_desde: number
+          secuencia_hasta: number
+          tipo_ecf: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          activo?: boolean
+          created_at?: string
+          fecha_vencimiento?: string | null
+          id?: string
+          prefijo?: string
+          secuencia_actual?: number
+          secuencia_desde?: number
+          secuencia_hasta?: number
+          tipo_ecf: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          activo?: boolean
+          created_at?: string
+          fecha_vencimiento?: string | null
+          id?: string
+          prefijo?: string
+          secuencia_actual?: number
+          secuencia_desde?: number
+          secuencia_hasta?: number
+          tipo_ecf?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       facturas: {
         Row: {
           cliente_id: string
@@ -791,6 +1051,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      next_encf: {
+        Args: { p_tipo: string; p_user_id: string }
+        Returns: string
       }
       next_ncf: { Args: { p_tipo: string; p_user_id: string }; Returns: string }
     }
