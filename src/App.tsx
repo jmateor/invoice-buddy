@@ -22,6 +22,7 @@ import Categorias from "./pages/Categorias";
 import Auditoria from "./pages/Auditoria";
 import NotasCredito from "./pages/NotasCredito";
 import ComprobantesElectronicos from "./pages/ComprobantesElectronicos";
+import ReportesDGII from "./pages/ReportesDGII";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -65,6 +66,7 @@ const App = () => (
             <Route path="/auditoria" element={<ProtectedRoute><Auditoria /></ProtectedRoute>} />
             <Route path="/notas-credito" element={<ProtectedRoute><NotasCredito /></ProtectedRoute>} />
             <Route path="/comprobantes-electronicos" element={<ProtectedRoute><ComprobantesElectronicos /></ProtectedRoute>} />
+            <Route path="/reportes-dgii" element={<ProtectedRoute><ReportesDGII /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
