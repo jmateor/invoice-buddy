@@ -717,6 +717,9 @@ export type Database = {
         Row: {
           activo: boolean
           created_at: string
+          estado: string
+          fecha_autorizacion: string | null
+          fecha_vencimiento: string | null
           id: string
           prefijo: string
           secuencia_actual: number
@@ -728,6 +731,9 @@ export type Database = {
         Insert: {
           activo?: boolean
           created_at?: string
+          estado?: string
+          fecha_autorizacion?: string | null
+          fecha_vencimiento?: string | null
           id?: string
           prefijo?: string
           secuencia_actual?: number
@@ -739,6 +745,9 @@ export type Database = {
         Update: {
           activo?: boolean
           created_at?: string
+          estado?: string
+          fecha_autorizacion?: string | null
+          fecha_vencimiento?: string | null
           id?: string
           prefijo?: string
           secuencia_actual?: number
@@ -874,6 +883,47 @@ export type Database = {
           },
           {
             foreignKeyName: "ordenes_servicio_factura_id_fkey"
+            columns: ["factura_id"]
+            isOneToOne: false
+            referencedRelation: "facturas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pagos_factura: {
+        Row: {
+          created_at: string
+          factura_id: string
+          fecha: string
+          id: string
+          metodo_pago: string
+          monto: number
+          referencia: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          factura_id: string
+          fecha?: string
+          id?: string
+          metodo_pago?: string
+          monto?: number
+          referencia?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          factura_id?: string
+          fecha?: string
+          id?: string
+          metodo_pago?: string
+          monto?: number
+          referencia?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pagos_factura_factura_id_fkey"
             columns: ["factura_id"]
             isOneToOne: false
             referencedRelation: "facturas"
@@ -1057,6 +1107,10 @@ export type Database = {
         Returns: string
       }
       next_ncf: { Args: { p_tipo: string; p_user_id: string }; Returns: string }
+      validar_secuencia_ncf: {
+        Args: { p_tipo: string; p_user_id: string }
+        Returns: Json
+      }
     }
     Enums: {
       app_role: "admin" | "cajero" | "contador"
