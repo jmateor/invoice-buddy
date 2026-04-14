@@ -1060,7 +1060,15 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "cajero" | "contador"
-      estado_factura: "activa" | "anulada"
+      estado_factura:
+        | "activa"
+        | "anulada"
+        | "borrador"
+        | "emitida"
+        | "enviada_dgii"
+        | "aceptada"
+        | "rechazada"
+        | "cobrada"
       metodo_pago: "efectivo" | "tarjeta" | "transferencia" | "nota_credito"
     }
     CompositeTypes: {
@@ -1190,7 +1198,16 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "cajero", "contador"],
-      estado_factura: ["activa", "anulada"],
+      estado_factura: [
+        "activa",
+        "anulada",
+        "borrador",
+        "emitida",
+        "enviada_dgii",
+        "aceptada",
+        "rechazada",
+        "cobrada",
+      ],
       metodo_pago: ["efectivo", "tarjeta", "transferencia", "nota_credito"],
     },
   },
