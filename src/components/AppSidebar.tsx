@@ -29,6 +29,7 @@ import {
   ClipboardList,
   Tags,
   RotateCcw,
+  FileSpreadsheet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -48,6 +49,7 @@ const secondaryItems = [
   { title: "Proveedores", url: "/proveedores", icon: Truck },
   { title: "Compras", url: "/compras", icon: ShoppingCart },
   { title: "Reportes", url: "/reportes", icon: BarChart3 },
+  { title: "Reportes DGII", url: "/reportes-dgii", icon: FileSpreadsheet },
   { title: "Usuarios y Roles", url: "/usuarios", icon: Shield },
   { title: "Configuraciones", url: "/configuraciones", icon: Settings },
   { title: "Auditoría", url: "/auditoria", icon: Shield },
@@ -64,6 +66,7 @@ export function AppSidebar() {
     if (item.title === "Auditoría" && !isAdmin) return false;
     if (item.title === "Proveedores" && isCajero) return false;
     if (item.title === "Reportes" && !canExportar) return false;
+    if (item.title === "Reportes DGII" && !canExportar) return false;
     if (item.title === "Compras" && isCajero) return false;
     return true;
   });

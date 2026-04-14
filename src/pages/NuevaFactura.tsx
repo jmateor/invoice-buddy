@@ -8,36 +8,42 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { Plus, Trash2, FileText, Loader2, UserPlus } from "lucide-react";
+import { Plus, Trash2, FileText, Loader2, UserPlus, AlertTriangle, CheckCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { generateInvoicePDF, type NegocioData } from "@/lib/generateInvoicePDF";
 import QuickClientModal from "@/components/QuickClientModal";
 
 interface Cliente { id: string; nombre: string; rnc_cedula: string | null; }
 interface Producto {
-  id: string;
-  nombre: string;
-  precio: number;
-  stock: number;
-  itbis_aplicable: boolean;
-  garantia_descripcion: string | null;
-  condiciones_garantia: string | null;
-  tipo: string;
+  id: string; nombre: string; precio: number; stock: number;
+  itbis_aplicable: boolean; garantia_descripcion: string | null;
+  condiciones_garantia: string | null; tipo: string;
 }
 interface LineaFactura {
-  producto_id: string;
-  nombre: string;
-  cantidad: number;
-  precio_unitario: number;
-  itbis: number;
-  subtotal: number;
-  garantia: string | null;
-  condiciones_garantia: string | null;
-  tipo: string;
+  producto_id: string; nombre: string; cantidad: number;
+  precio_unitario: number; itbis: number; subtotal: number;
+  garantia: string | null; condiciones_garantia: string | null; tipo: string;
 }
 
 const ITBIS_RATE = 0.18;
+
+const TIPOS_COMPROBANTE = [
+  { value: "B01", label: "B01 – Crédito Fiscal", requiereRNC: true },
+  { value: "B02", label: "B02 – Consumidor Final", requiereRNC: false },
+  { value: "B14", label: "B14 – Gubernamental", requiereRNC: true },
+  { value: "B15", label: "B15 – Regímenes Especiales", requiereRNC: true },
+];
+
+interface SecuenciaStatus {
+  valido: boolean;
+  error?: string;
+  alerta?: string | null;
+  porcentaje_uso?: number;
+  restantes?: number;
+}
 
 export default function NuevaFactura() {
   const { user } = useAuth();
@@ -46,6 +52,7 @@ export default function NuevaFactura() {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [clienteId, setClienteId] = useState("");
   const [metodoPago, setMetodoPago] = useState<string>("efectivo");
+  const [tipoComprobante, setTipoComprobante] = useState("B02");
   const [descuento, setDescuento] = useState("0");
   const [notas, setNotas] = useState("");
   const [lineas, setLineas] = useState<LineaFactura[]>([]);
@@ -53,6 +60,7 @@ export default function NuevaFactura() {
   const [quickClientOpen, setQuickClientOpen] = useState(false);
   const [negocio, setNegocio] = useState<NegocioData | null>(null);
   const [formatoImpresion, setFormatoImpresion] = useState<"carta" | "80mm" | "58mm">("carta");
+  const [secuenciaStatus, setSecuenciaStatus] = useState<SecuenciaStatus | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -68,14 +76,9 @@ export default function NuevaFactura() {
       if (neg.data) {
         const d = neg.data as any;
         setNegocio({
-          nombre_comercial: d.nombre_comercial,
-          razon_social: d.razon_social,
-          rnc: d.rnc,
-          direccion: d.direccion,
-          telefono: d.telefono,
-          whatsapp: d.whatsapp,
-          email: d.email,
-          logo_url: d.logo_url,
+          nombre_comercial: d.nombre_comercial, razon_social: d.razon_social,
+          rnc: d.rnc, direccion: d.direccion, telefono: d.telefono,
+          whatsapp: d.whatsapp, email: d.email, logo_url: d.logo_url,
           mensaje_factura: d.mensaje_factura,
         });
         if (d.formato_impresion) setFormatoImpresion(d.formato_impresion as any);
@@ -83,18 +86,28 @@ export default function NuevaFactura() {
     });
   }, [user]);
 
+  // Validate sequence when tipo_comprobante changes
+  useEffect(() => {
+    if (!user) return;
+    supabase.rpc("validar_secuencia_ncf" as any, { p_user_id: user.id, p_tipo: tipoComprobante })
+      .then(({ data }: any) => {
+        if (data) setSecuenciaStatus(data as SecuenciaStatus);
+      });
+  }, [user, tipoComprobante]);
+
+  const selectedCliente = clientes.find(c => c.id === clienteId);
+  const tipoConfig = TIPOS_COMPROBANTE.find(t => t.value === tipoComprobante);
+  const requiereRNC = tipoConfig?.requiereRNC || false;
+  const clienteSinRNC = requiereRNC && selectedCliente && !selectedCliente.rnc_cedula;
+
   const addLinea = (productoId: string) => {
     const prod = productos.find(p => p.id === productoId);
     if (!prod) return;
     if (lineas.find(l => l.producto_id === productoId)) { toast.error("Producto ya agregado"); return; }
     const itbis = prod.itbis_aplicable ? prod.precio * ITBIS_RATE : 0;
     setLineas([...lineas, {
-      producto_id: productoId,
-      nombre: prod.nombre,
-      cantidad: 1,
-      precio_unitario: Number(prod.precio),
-      itbis,
-      subtotal: Number(prod.precio) + itbis,
+      producto_id: productoId, nombre: prod.nombre, cantidad: 1,
+      precio_unitario: Number(prod.precio), itbis, subtotal: Number(prod.precio) + itbis,
       garantia: prod.garantia_descripcion || null,
       condiciones_garantia: prod.condiciones_garantia || null,
       tipo: prod.tipo || "producto",
@@ -118,82 +131,92 @@ export default function NuevaFactura() {
   const desc = parseFloat(descuento) || 0;
   const total = subtotal + totalItbis - desc;
 
-  const handleSave = async () => {
+  const handleSave = async (emitir: boolean) => {
     if (!clienteId) { toast.error("Selecciona un cliente"); return; }
     if (lineas.length === 0) { toast.error("Agrega al menos un producto"); return; }
+    if (emitir && clienteSinRNC) {
+      toast.error(`El comprobante ${tipoComprobante} requiere RNC/Cédula del cliente`);
+      return;
+    }
+    if (emitir && secuenciaStatus && !secuenciaStatus.valido) {
+      toast.error(secuenciaStatus.error || "Secuencia no disponible");
+      return;
+    }
 
     setSaving(true);
     try {
+      let ncf: string | null = null;
+      const estado = emitir ? "emitida" : "borrador";
+
+      if (emitir) {
+        const { data: ncfData, error: ncfError } = await supabase.rpc("next_ncf" as any, {
+          p_user_id: user!.id, p_tipo: tipoComprobante
+        });
+        if (ncfError) throw ncfError;
+        ncf = ncfData as string;
+      }
+
       const { data: seqData } = await supabase.rpc("nextval" as any, { seq_name: "factura_numero_seq" });
       const numero = `FAC-${String(seqData || Date.now()).padStart(6, "0")}`;
 
       const { data: factura, error: facError } = await supabase.from("facturas").insert({
-        numero,
-        cliente_id: clienteId,
-        subtotal,
-        itbis: totalItbis,
-        descuento: desc,
-        total,
-        metodo_pago: metodoPago as any,
-        notas: notas || null,
-        user_id: user!.id,
+        numero, cliente_id: clienteId, subtotal, itbis: totalItbis,
+        descuento: desc, total, metodo_pago: metodoPago as any,
+        notas: notas || null, user_id: user!.id,
+        tipo_comprobante: tipoComprobante, ncf: ncf || "",
+        estado: estado as any,
       }).select().single();
 
       if (facError) throw facError;
 
       const detalles = lineas.map(l => ({
-        factura_id: factura.id,
-        producto_id: l.producto_id,
-        cantidad: l.cantidad,
-        precio_unitario: l.precio_unitario,
-        itbis: l.itbis,
-        subtotal: l.subtotal,
+        factura_id: factura.id, producto_id: l.producto_id,
+        cantidad: l.cantidad, precio_unitario: l.precio_unitario,
+        itbis: l.itbis, subtotal: l.subtotal,
       }));
 
       const { error: detError } = await supabase.from("detalle_facturas").insert(detalles);
       if (detError) throw detError;
 
-      // Only decrement stock for products, NOT services
-      for (const l of lineas) {
-        if (l.tipo !== "servicio") {
-          await supabase.rpc("decrement_stock" as any, { p_id: l.producto_id, amount: l.cantidad });
+      // Only decrement stock for products when emitting
+      if (emitir) {
+        for (const l of lineas) {
+          if (l.tipo !== "servicio") {
+            await supabase.rpc("decrement_stock" as any, { p_id: l.producto_id, amount: l.cantidad });
+          }
         }
       }
 
       await supabase.from("audit_logs").insert({
         user_id: user!.id,
-        accion: "crear_factura",
-        entidad: "facturas",
-        entidad_id: factura.id,
-        detalles: { numero, total, cliente_id: clienteId, subtotal, metodopago: metodoPago }
+        accion: emitir ? "emitir_factura" : "crear_borrador",
+        entidad: "facturas", entidad_id: factura.id,
+        detalles: { numero, total, ncf, tipo_comprobante: tipoComprobante, estado }
       } as any);
 
-      // Generate PDF with business data
-      const cliente = clientes.find(c => c.id === clienteId);
-      generateInvoicePDF({
-        numero,
-        fecha: new Date().toISOString(),
-        cliente: { nombre: cliente?.nombre || "", rnc_cedula: cliente?.rnc_cedula },
-        detalles: lineas.map(l => ({
-          nombre: l.nombre,
-          cantidad: l.cantidad,
-          precio_unitario: l.precio_unitario,
-          itbis: l.itbis,
-          subtotal: l.subtotal,
-          garantia: l.garantia,
-          condiciones_garantia: l.condiciones_garantia,
-        })),
-        subtotal,
-        itbis: totalItbis,
-        descuento: desc,
-        total,
-        metodo_pago: metodoPago,
-        notas,
-        negocio: negocio || undefined,
-        formato: formatoImpresion,
-      });
+      if (emitir) {
+        const cliente = clientes.find(c => c.id === clienteId);
+        generateInvoicePDF({
+          numero, fecha: new Date().toISOString(),
+          cliente: { nombre: cliente?.nombre || "", rnc_cedula: cliente?.rnc_cedula },
+          detalles: lineas.map(l => ({
+            nombre: l.nombre, cantidad: l.cantidad,
+            precio_unitario: l.precio_unitario, itbis: l.itbis,
+            subtotal: l.subtotal, garantia: l.garantia,
+            condiciones_garantia: l.condiciones_garantia,
+          })),
+          subtotal, itbis: totalItbis, descuento: desc, total,
+          metodo_pago: metodoPago, notas,
+          ncf: ncf || undefined,
+          tipo_comprobante: tipoComprobante,
+          negocio: negocio || undefined, formato: formatoImpresion,
+        });
+      }
 
-      toast.success(`Factura ${numero} creada y PDF generado`);
+      toast.success(emitir
+        ? `Factura ${numero} emitida con NCF ${ncf}`
+        : `Borrador ${numero} guardado`
+      );
       navigate("/facturas");
     } catch (err: any) {
       toast.error(err.message || "Error al crear factura");
@@ -210,13 +233,54 @@ export default function NuevaFactura() {
     <div className="animate-fade-in space-y-6 max-w-4xl">
       <div>
         <h1 className="text-2xl font-bold text-foreground">Nueva Factura</h1>
-        <p className="text-muted-foreground">Genera una nueva factura</p>
+        <p className="text-muted-foreground">Genera una nueva factura con valor fiscal</p>
       </div>
+
+      {/* Sequence alerts */}
+      {secuenciaStatus && !secuenciaStatus.valido && (
+        <Alert variant="destructive">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertDescription>{secuenciaStatus.error}</AlertDescription>
+        </Alert>
+      )}
+      {secuenciaStatus?.alerta === "proxima_agotar" && (
+        <Alert>
+          <AlertTriangle className="h-4 w-4 text-amber-500" />
+          <AlertDescription className="text-amber-700 dark:text-amber-400">
+            ⚠️ Secuencia {tipoComprobante} al {secuenciaStatus.porcentaje_uso}% de uso. Quedan {secuenciaStatus.restantes} comprobantes.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader><CardTitle className="text-base">Datos de la Factura</CardTitle></CardHeader>
           <CardContent className="space-y-4">
+            {/* Tipo de Comprobante */}
+            <div className="space-y-2">
+              <Label>Tipo de Comprobante Fiscal *</Label>
+              <Select value={tipoComprobante} onValueChange={setTipoComprobante}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {TIPOS_COMPROBANTE.map(t => (
+                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="text-xs">
+                  {tipoConfig?.requiereRNC ? "🔒 Requiere RNC" : "✅ Sin RNC requerido"}
+                </Badge>
+                {secuenciaStatus?.valido && (
+                  <Badge variant="secondary" className="text-xs">
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    {secuenciaStatus.restantes} disponibles
+                  </Badge>
+                )}
+              </div>
+            </div>
+
+            {/* Cliente */}
             <div className="space-y-2">
               <Label>Cliente *</Label>
               <div className="flex gap-2">
@@ -224,7 +288,9 @@ export default function NuevaFactura() {
                   <SelectTrigger className="flex-1"><SelectValue placeholder="Selecciona un cliente" /></SelectTrigger>
                   <SelectContent>
                     {clientes.map(c => (
-                      <SelectItem key={c.id} value={c.id}>{c.nombre} {c.rnc_cedula ? `(${c.rnc_cedula})` : ""}</SelectItem>
+                      <SelectItem key={c.id} value={c.id}>
+                        {c.nombre} {c.rnc_cedula ? `(${c.rnc_cedula})` : ""}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
@@ -232,7 +298,13 @@ export default function NuevaFactura() {
                   <UserPlus className="h-4 w-4" />
                 </Button>
               </div>
+              {clienteSinRNC && (
+                <p className="text-xs text-destructive font-medium">
+                  ⚠️ Este cliente no tiene RNC/Cédula. Es obligatorio para {tipoComprobante}.
+                </p>
+              )}
             </div>
+
             <div className="space-y-2">
               <Label>Método de Pago</Label>
               <Select value={metodoPago} onValueChange={setMetodoPago}>
@@ -244,27 +316,19 @@ export default function NuevaFactura() {
                 </SelectContent>
               </Select>
             </div>
+
             <div className="space-y-2">
               <Label>Formato de Impresión</Label>
               <div className="flex gap-2">
                 {(["carta", "80mm", "58mm"] as const).map(fmt => (
-                  <Button
-                    key={fmt}
-                    type="button"
-                    variant={formatoImpresion === fmt ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => setFormatoImpresion(fmt)}
-                  >
+                  <Button key={fmt} type="button" variant={formatoImpresion === fmt ? "default" : "outline"}
+                    size="sm" onClick={() => setFormatoImpresion(fmt)}>
                     {fmt === "carta" ? "📄 Carta" : `🧾 ${fmt}`}
                   </Button>
                 ))}
               </div>
-              <p className="text-xs text-muted-foreground">
-                {formatoImpresion === "carta" ? "Tamaño A4 – ideal para impresoras de oficina" :
-                  formatoImpresion === "80mm" ? "Térmica 80mm – impresora de punto de venta" :
-                    "Térmica 58mm – impresora compacta"}
-              </p>
             </div>
+
             <div className="space-y-2">
               <Label>Descuento (RD$)</Label>
               <Input type="number" step="0.01" value={descuento} onChange={e => setDescuento(e.target.value)} />
@@ -286,6 +350,10 @@ export default function NuevaFactura() {
                 {negocio.direccion && <p className="text-xs text-muted-foreground">{negocio.direccion}</p>}
               </div>
             )}
+            <div className="rounded-lg bg-primary/5 p-2.5 border border-primary/20">
+              <p className="text-xs font-semibold text-primary">📋 {tipoConfig?.label}</p>
+              <p className="text-xs text-muted-foreground">Factura con valor fiscal</p>
+            </div>
             <div className="flex justify-between text-sm"><span className="text-muted-foreground">Subtotal</span><span>RD$ {subtotal.toLocaleString("es-DO", { minimumFractionDigits: 2 })}</span></div>
             <div className="flex justify-between text-sm"><span className="text-muted-foreground">ITBIS (18%)</span><span>RD$ {totalItbis.toLocaleString("es-DO", { minimumFractionDigits: 2 })}</span></div>
             <div className="flex justify-between text-sm"><span className="text-muted-foreground">Descuento</span><span>-RD$ {desc.toLocaleString("es-DO", { minimumFractionDigits: 2 })}</span></div>
@@ -293,10 +361,15 @@ export default function NuevaFactura() {
               <span>Total</span>
               <span>RD$ {total.toLocaleString("es-DO", { minimumFractionDigits: 2 })}</span>
             </div>
-            <Button onClick={handleSave} className="w-full mt-4" disabled={saving}>
-              {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}
-              Generar Factura + PDF
-            </Button>
+            <div className="flex flex-col gap-2 mt-4">
+              <Button onClick={() => handleSave(true)} className="w-full" disabled={saving || (secuenciaStatus !== null && !secuenciaStatus.valido)}>
+                {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}
+                Emitir Factura (con NCF)
+              </Button>
+              <Button onClick={() => handleSave(false)} variant="outline" className="w-full" disabled={saving}>
+                Guardar como Borrador
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -306,9 +379,7 @@ export default function NuevaFactura() {
           <div className="flex items-center justify-between">
             <CardTitle className="text-base">Productos</CardTitle>
             <Select onValueChange={addLinea}>
-              <SelectTrigger className="w-64">
-                <SelectValue placeholder="Agregar producto..." />
-              </SelectTrigger>
+              <SelectTrigger className="w-64"><SelectValue placeholder="Agregar producto..." /></SelectTrigger>
               <SelectContent>
                 {productos.map(p => (
                   <SelectItem key={p.id} value={p.id}>
@@ -344,9 +415,7 @@ export default function NuevaFactura() {
                   <TableCell className="font-medium">
                     <div>{l.nombre}</div>
                     {l.garantia && (
-                      <div className="text-xs text-primary mt-0.5 flex items-center gap-1">
-                        🛡️ Garantía: {l.garantia}
-                      </div>
+                      <div className="text-xs text-primary mt-0.5 flex items-center gap-1">🛡️ Garantía: {l.garantia}</div>
                     )}
                   </TableCell>
                   <TableCell>

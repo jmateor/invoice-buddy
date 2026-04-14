@@ -34,9 +34,12 @@ export interface InvoiceData {
 }
 
 const metodoPagoLabel: Record<string, string> = {
-  efectivo: "Efectivo",
-  tarjeta: "Tarjeta",
-  transferencia: "Transferencia",
+  efectivo: "Efectivo", tarjeta: "Tarjeta", transferencia: "Transferencia",
+};
+
+const tipoComprobanteLabel: Record<string, string> = {
+  B01: "Crédito Fiscal", B02: "Consumidor Final", B14: "Gubernamental",
+  B15: "Regímenes Especiales", B04: "Nota de Crédito",
 };
 
 const fmt = (n: number) => `RD$ ${n.toLocaleString("es-DO", { minimumFractionDigits: 2 })}`;
@@ -47,51 +50,48 @@ function generateCartaPDF(data: InvoiceData, action: "download" | "print" | "blo
   const pageWidth = doc.internal.pageSize.getWidth();
   const neg = data.negocio;
 
-  // ── Header background
   doc.setFillColor(30, 58, 95);
-  doc.rect(0, 0, pageWidth, 44, "F");
+  doc.rect(0, 0, pageWidth, 48, "F");
 
-  const logoX = 14;
   let headerTextX = 14;
-
   if (neg?.logo_url) {
-    try {
-      doc.addImage(neg.logo_url, "JPEG", logoX, 4, 28, 28);
-      headerTextX = 48;
-    } catch { /* logo failed, skip */ }
+    try { doc.addImage(neg.logo_url, "JPEG", 14, 4, 28, 28); headerTextX = 48; } catch {}
   }
 
-  // ── Business name & info
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(neg?.nombre_comercial ? 16 : 22);
   doc.setFont("helvetica", "bold");
-  doc.text(neg?.nombre_comercial || "FACTURA", headerTextX, 16);
+  doc.text(neg?.nombre_comercial || "FACTURA", headerTextX, 14);
 
-  if (neg?.razon_social) {
-    doc.setFontSize(9); doc.setFont("helvetica", "normal");
-    doc.text(neg.razon_social, headerTextX, 22);
-  }
-  if (neg?.rnc) {
-    doc.setFontSize(8); doc.text(`RNC: ${neg.rnc}`, headerTextX, 28);
-  }
-  if (neg?.direccion) {
-    doc.setFontSize(8);
-    const dir = doc.splitTextToSize(neg.direccion, 80);
-    doc.text(dir, headerTextX, 34);
-  }
+  if (neg?.razon_social) { doc.setFontSize(9); doc.setFont("helvetica", "normal"); doc.text(neg.razon_social, headerTextX, 20); }
+  if (neg?.rnc) { doc.setFontSize(8); doc.text(`RNC: ${neg.rnc}`, headerTextX, 26); }
+  if (neg?.direccion) { doc.setFontSize(8); doc.text(doc.splitTextToSize(neg.direccion, 80), headerTextX, 32); }
 
-  // ── Invoice meta (right)
-  doc.setFontSize(14); doc.setFont("helvetica", "bold");
-  doc.text("FACTURA", pageWidth - 14, 14, { align: "right" });
+  // Right side - invoice meta
+  doc.setFontSize(12); doc.setFont("helvetica", "bold");
+  doc.text("FACTURA", pageWidth - 14, 12, { align: "right" });
   doc.setFontSize(10); doc.setFont("helvetica", "normal");
-  doc.text(data.numero, pageWidth - 14, 21, { align: "right" });
-  if (data.ncf) { doc.setFontSize(9); doc.text(`NCF: ${data.ncf}`, pageWidth - 14, 27, { align: "right" }); }
-  doc.setFontSize(9);
-  doc.text(`Fecha: ${new Date(data.fecha).toLocaleDateString("es-DO")}`, pageWidth - 14, 33, { align: "right" });
-  doc.text(`Pago: ${metodoPagoLabel[data.metodo_pago] || data.metodo_pago}`, pageWidth - 14, 39, { align: "right" });
+  doc.text(data.numero, pageWidth - 14, 18, { align: "right" });
 
-  // ── Contact info
-  let contactY = 50;
+  // NCF - prominent display
+  if (data.ncf) {
+    doc.setFontSize(10); doc.setFont("helvetica", "bold");
+    doc.text(`NCF: ${data.ncf}`, pageWidth - 14, 25, { align: "right" });
+  }
+
+  // Tipo comprobante
+  if (data.tipo_comprobante) {
+    doc.setFontSize(8); doc.setFont("helvetica", "normal");
+    const tipoLabel = tipoComprobanteLabel[data.tipo_comprobante] || data.tipo_comprobante;
+    doc.text(`Tipo: ${tipoLabel}`, pageWidth - 14, 31, { align: "right" });
+  }
+
+  doc.setFontSize(8);
+  doc.text(`Fecha: ${new Date(data.fecha).toLocaleDateString("es-DO")}`, pageWidth - 14, 37, { align: "right" });
+  doc.text(`Pago: ${metodoPagoLabel[data.metodo_pago] || data.metodo_pago}`, pageWidth - 14, 43, { align: "right" });
+
+  // Contact info
+  let contactY = 54;
   if (neg?.telefono || neg?.email || neg?.whatsapp) {
     doc.setTextColor(80, 80, 80); doc.setFontSize(8); doc.setFont("helvetica", "normal");
     const parts: string[] = [];
@@ -104,7 +104,7 @@ function generateCartaPDF(data: InvoiceData, action: "download" | "print" | "blo
     contactY += 4;
   }
 
-  // ── Client info
+  // Client info
   doc.setFillColor(245, 247, 250);
   doc.roundedRect(14, contactY, pageWidth - 28, 30, 2, 2, "F");
   doc.setTextColor(30, 58, 95); doc.setFontSize(9); doc.setFont("helvetica", "bold");
@@ -116,7 +116,7 @@ function generateCartaPDF(data: InvoiceData, action: "download" | "print" | "blo
   if (data.cliente.direccion) { cy += 5; doc.text(`Dir: ${data.cliente.direccion}`, 18, cy); }
   if (data.cliente.telefono) { cy += 5; doc.text(`Tel: ${data.cliente.telefono}`, 18, cy); }
 
-  // ── Items table – build body with warranty lines
+  // Items table
   const tableBody: any[][] = [];
   for (const d of data.detalles) {
     let nameText = d.nombre;
@@ -134,18 +134,15 @@ function generateCartaPDF(data: InvoiceData, action: "download" | "print" | "blo
     alternateRowStyles: { fillColor: [248, 250, 252] },
     styles: { fontSize: 9, cellPadding: 3 },
     columnStyles: {
-      0: { cellWidth: "auto" },
-      1: { halign: "center", cellWidth: 16 },
-      2: { halign: "right", cellWidth: 32 },
-      3: { halign: "right", cellWidth: 28 },
+      0: { cellWidth: "auto" }, 1: { halign: "center", cellWidth: 16 },
+      2: { halign: "right", cellWidth: 32 }, 3: { halign: "right", cellWidth: 28 },
       4: { halign: "right", cellWidth: 32 },
     },
   });
 
-  // ── Totals
+  // Totals
   const finalY = (doc as any).lastAutoTable.finalY + 6;
   const totalsX = pageWidth - 75;
-
   doc.setFillColor(248, 250, 252);
   doc.roundedRect(totalsX - 4, finalY - 4, 75, data.descuento > 0 ? 36 : 28, 2, 2, "F");
 
@@ -168,7 +165,7 @@ function generateCartaPDF(data: InvoiceData, action: "download" | "print" | "blo
   doc.text("TOTAL:", totalsX, totalLineY + 6);
   doc.text(fmt(data.total), pageWidth - 16, totalLineY + 6, { align: "right" });
 
-  // ── Notes
+  // Notes
   let footerY = totalLineY + 16;
   if (data.notas) {
     doc.setFontSize(8); doc.setFont("helvetica", "italic"); doc.setTextColor(120, 120, 120);
@@ -176,13 +173,21 @@ function generateCartaPDF(data: InvoiceData, action: "download" | "print" | "blo
     footerY += 7;
   }
 
-  // ── Footer message
+  // Footer
   const pageH = doc.internal.pageSize.getHeight();
+
+  // Legal fiscal notice
+  if (data.ncf) {
+    doc.setFontSize(7); doc.setFont("helvetica", "bold"); doc.setTextColor(30, 58, 95);
+    doc.text("DOCUMENTO CON VALOR FISCAL", pageWidth / 2, pageH - 28, { align: "center" });
+    doc.setFont("helvetica", "normal"); doc.setFontSize(7); doc.setTextColor(100, 100, 100);
+    doc.text(`NCF: ${data.ncf}`, pageWidth / 2, pageH - 24, { align: "center" });
+  }
+
   if (neg?.mensaje_factura) {
-    doc.setDrawColor(200, 210, 220); doc.line(14, pageH - 22, pageWidth - 14, pageH - 22);
+    doc.setDrawColor(200, 210, 220); doc.line(14, pageH - 20, pageWidth - 14, pageH - 20);
     doc.setFontSize(8); doc.setFont("helvetica", "normal"); doc.setTextColor(100, 100, 100);
-    const msgLines = doc.splitTextToSize(neg.mensaje_factura, pageWidth - 28);
-    doc.text(msgLines, pageWidth / 2, pageH - 18, { align: "center" });
+    doc.text(doc.splitTextToSize(neg.mensaje_factura, pageWidth - 28), pageWidth / 2, pageH - 16, { align: "center" });
   }
 
   doc.setFontSize(7); doc.setTextColor(160, 160, 160);
@@ -207,31 +212,32 @@ function generateThermalPDF(data: InvoiceData, action: "download" | "print" | "b
     doc.text(text, pw / 2, y, { align: "center" });
     y += size * 0.45;
   };
-
   const line = () => { doc.setDrawColor(180, 180, 180); doc.line(4, y, pw - 4, y); y += 3; };
 
-  // ── Header
   if (neg?.nombre_comercial) center(neg.nombre_comercial, 11, true);
   if (neg?.razon_social) center(neg.razon_social, 7);
   if (neg?.rnc) center(`RNC: ${neg.rnc}`, 7);
   if (neg?.direccion) {
     doc.setFontSize(7); doc.setFont("helvetica", "normal");
     const lines = doc.splitTextToSize(neg.direccion, pw - 8);
-    doc.text(lines, pw / 2, y, { align: "center" });
-    y += lines.length * 3.5;
+    doc.text(lines, pw / 2, y, { align: "center" }); y += lines.length * 3.5;
   }
   if (neg?.telefono) center(neg.telefono, 7);
   y += 2; line();
 
-  // ── Invoice meta
   center("FACTURA", 10, true);
   center(data.numero, 8);
-  if (data.ncf) center(`NCF: ${data.ncf}`, 7);
+  if (data.ncf) {
+    center(`NCF: ${data.ncf}`, 8, true);
+  }
+  if (data.tipo_comprobante) {
+    const tipoLabel = tipoComprobanteLabel[data.tipo_comprobante] || data.tipo_comprobante;
+    center(`Tipo: ${tipoLabel}`, 7);
+  }
   center(new Date(data.fecha).toLocaleDateString("es-DO"), 7);
   center(`Pago: ${metodoPagoLabel[data.metodo_pago] || data.metodo_pago}`, 7);
   y += 1; line();
 
-  // ── Client
   doc.setFontSize(7); doc.setFont("helvetica", "bold");
   doc.text("CLIENTE:", 4, y); y += 3.5;
   doc.setFont("helvetica", "normal");
@@ -239,11 +245,9 @@ function generateThermalPDF(data: InvoiceData, action: "download" | "print" | "b
   if (data.cliente.rnc_cedula) { doc.text(`RNC/Céd: ${data.cliente.rnc_cedula}`, 4, y); y += 3.5; }
   y += 1; line();
 
-  // ── Products
   doc.setFontSize(7); doc.setFont("helvetica", "bold");
   doc.text("CANT  PRODUCTO", 4, y);
-  doc.text("TOTAL", pw - 4, y, { align: "right" });
-  y += 4;
+  doc.text("TOTAL", pw - 4, y, { align: "right" }); y += 4;
   doc.setFont("helvetica", "normal");
 
   for (const d of data.detalles) {
@@ -259,14 +263,12 @@ function generateThermalPDF(data: InvoiceData, action: "download" | "print" | "b
     if (d.condiciones_garantia) {
       doc.setFont("helvetica", "italic"); doc.setFontSize(6);
       const cLines = doc.splitTextToSize(`  ${d.condiciones_garantia}`, pw - 10);
-      doc.text(cLines, 4, y);
-      y += cLines.length * 3;
+      doc.text(cLines, 4, y); y += cLines.length * 3;
       doc.setFont("helvetica", "normal"); doc.setFontSize(7);
     }
   }
   y += 1; line();
 
-  // ── Totals
   const totRow = (label: string, value: string, bold = false) => {
     doc.setFontSize(8); doc.setFont("helvetica", bold ? "bold" : "normal");
     doc.text(label, 4, y); doc.text(value, pw - 4, y, { align: "right" }); y += 4;
@@ -278,21 +280,25 @@ function generateThermalPDF(data: InvoiceData, action: "download" | "print" | "b
   totRow("TOTAL:", fmt(data.total), true);
   y += 2;
 
-  // ── Notes
+  if (data.ncf) {
+    line();
+    doc.setFontSize(8); doc.setFont("helvetica", "bold"); doc.setTextColor(20, 20, 20);
+    doc.text("DOCUMENTO CON VALOR FISCAL", pw / 2, y, { align: "center" }); y += 4;
+    doc.setFontSize(7); doc.setFont("helvetica", "normal");
+    doc.text(`NCF: ${data.ncf}`, pw / 2, y, { align: "center" }); y += 4;
+  }
+
   if (data.notas) {
     doc.setFontSize(7); doc.setFont("helvetica", "italic"); doc.setTextColor(100, 100, 100);
     const nLines = doc.splitTextToSize(`Notas: ${data.notas}`, pw - 8);
-    doc.text(nLines, pw / 2, y, { align: "center" });
-    y += nLines.length * 3.5 + 2;
+    doc.text(nLines, pw / 2, y, { align: "center" }); y += nLines.length * 3.5 + 2;
   }
 
-  // ── Footer message
   if (neg?.mensaje_factura) {
     line();
     doc.setFontSize(7); doc.setFont("helvetica", "normal"); doc.setTextColor(80, 80, 80);
     const mLines = doc.splitTextToSize(neg.mensaje_factura, pw - 8);
-    doc.text(mLines, pw / 2, y, { align: "center" });
-    y += mLines.length * 3.5 + 2;
+    doc.text(mLines, pw / 2, y, { align: "center" }); y += mLines.length * 3.5 + 2;
   }
 
   doc.setFontSize(6.5); doc.setTextColor(150, 150, 150);
@@ -303,14 +309,9 @@ function generateThermalPDF(data: InvoiceData, action: "download" | "print" | "b
   else { doc.save(`${data.numero}.pdf`); }
 }
 
-// ─── PUBLIC ENTRY POINT ────────────────────────────────────────────────
 export function generateInvoicePDF(data: InvoiceData, action: "download" | "print" | "blob" = "download") {
   const formato = data.formato || "carta";
-  if (formato === "58mm") {
-    return generateThermalPDF(data, action, 58);
-  } else if (formato === "80mm") {
-    return generateThermalPDF(data, action, 80);
-  } else {
-    return generateCartaPDF(data, action);
-  }
+  if (formato === "58mm") return generateThermalPDF(data, action, 58);
+  else if (formato === "80mm") return generateThermalPDF(data, action, 80);
+  else return generateCartaPDF(data, action);
 }
