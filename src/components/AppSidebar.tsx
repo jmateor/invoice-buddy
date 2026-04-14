@@ -66,6 +66,7 @@ export function AppSidebar() {
     if (item.title === "Auditoría" && !isAdmin) return false;
     if (item.title === "Proveedores" && isCajero) return false;
     if (item.title === "Reportes" && !canExportar) return false;
+    if (item.title === "Reportes DGII" && !canExportar) return false;
     if (item.title === "Compras" && isCajero) return false;
     return true;
   });
