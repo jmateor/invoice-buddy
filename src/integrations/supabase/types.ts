@@ -1106,6 +1106,7 @@ export type Database = {
         Args: { p_tipo: string; p_user_id: string }
         Returns: string
       }
+      next_invoice_number: { Args: { p_user_id: string }; Returns: string }
       next_ncf: { Args: { p_tipo: string; p_user_id: string }; Returns: string }
       validar_secuencia_ncf: {
         Args: { p_tipo: string; p_user_id: string }
