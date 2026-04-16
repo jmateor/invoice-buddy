@@ -100,6 +100,14 @@ export default function NuevaFactura() {
   const requiereRNC = tipoConfig?.requiereRNC || false;
   const clienteSinRNC = requiereRNC && selectedCliente && !selectedCliente.rnc_cedula;
 
+  // Validate RNC format: 9 digits (empresa) or 11 digits (persona)
+  const validarRNC = (rnc: string | null | undefined): boolean => {
+    if (!rnc) return false;
+    const clean = rnc.replace(/[-\s]/g, "");
+    return /^\d{9}$/.test(clean) || /^\d{11}$/.test(clean);
+  };
+  const rncInvalido = requiereRNC && selectedCliente?.rnc_cedula && !validarRNC(selectedCliente.rnc_cedula);
+
   const addLinea = (productoId: string) => {
     const prod = productos.find(p => p.id === productoId);
     if (!prod) return;
@@ -138,6 +146,10 @@ export default function NuevaFactura() {
       toast.error(`El comprobante ${tipoComprobante} requiere RNC/Cédula del cliente`);
       return;
     }
+    if (emitir && rncInvalido) {
+      toast.error(`El RNC/Cédula "${selectedCliente?.rnc_cedula}" no tiene formato válido (9 o 11 dígitos)`);
+      return;
+    }
     if (emitir && secuenciaStatus && !secuenciaStatus.valido) {
       toast.error(secuenciaStatus.error || "Secuencia no disponible");
       return;
@@ -156,8 +168,11 @@ export default function NuevaFactura() {
         ncf = ncfData as string;
       }
 
-      const { data: seqData } = await supabase.rpc("nextval" as any, { seq_name: "factura_numero_seq" });
-      const numero = `FAC-${String(seqData || Date.now()).padStart(6, "0")}`;
+      const { data: seqData, error: seqErr } = await supabase.rpc("next_invoice_number" as any, {
+        p_user_id: user!.id,
+      });
+      if (seqErr) throw seqErr;
+      const numero = seqData as string;
 
       const { data: factura, error: facError } = await supabase.from("facturas").insert({
         numero, cliente_id: clienteId, subtotal, itbis: totalItbis,
