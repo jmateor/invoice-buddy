@@ -14,7 +14,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Search, FileText, Ban, Download, Printer, MessageCircle, RotateCcw, Eye, DollarSign } from "lucide-react";
+import { Search, FileText, Ban, Download, Printer, MessageCircle, RotateCcw, Eye, DollarSign, Send } from "lucide-react";
 import { Link } from "react-router-dom";
 import { generateInvoicePDF, type NegocioData } from "@/lib/generateInvoicePDF";
 import { exportToExcel } from "@/lib/exportUtils";
@@ -243,9 +243,11 @@ export default function Facturas() {
             <SelectItem value="todas">Todas</SelectItem>
             <SelectItem value="borrador">Borrador</SelectItem>
             <SelectItem value="emitida">Emitida</SelectItem>
+            <SelectItem value="enviada_dgii">Enviada DGII</SelectItem>
+            <SelectItem value="aceptada">Aceptada</SelectItem>
+            <SelectItem value="rechazada">Rechazada</SelectItem>
             <SelectItem value="cobrada">Cobrada</SelectItem>
             <SelectItem value="anulada">Anulada</SelectItem>
-            <SelectItem value="activa">Activa (legacy)</SelectItem>
           </SelectContent>
         </Select>
         {(fechaDesde || fechaHasta || estadoFiltro !== "todas") && (
