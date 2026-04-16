@@ -332,6 +332,11 @@ export default function Facturas() {
                             <FileText className="h-4 w-4 text-primary" />
                           </Button>
                         )}
+                        {f.estado === "emitida" && f.ncf && (
+                          <Button variant="ghost" size="icon" onClick={() => handleGenerarEcf(f)} title="Generar e-CF para DGII">
+                            <Send className="h-4 w-4 text-blue-600" />
+                          </Button>
+                        )}
                         {["emitida", "activa", "aceptada"].includes(f.estado) && (
                           <Button variant="ghost" size="icon" onClick={() => handleCobrar(f)} title="Marcar cobrada">
                             <DollarSign className="h-4 w-4 text-emerald-600" />
