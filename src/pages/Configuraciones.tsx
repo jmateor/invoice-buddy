@@ -13,7 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Save, Building2, Settings2, Hash, Loader2, Printer, Package, ShieldAlert, MonitorSmartphone } from "lucide-react";
+import { Save, Building2, Settings2, Hash, Loader2, Printer, Package, ShieldAlert, MonitorSmartphone, AlertTriangle, Calendar } from "lucide-react";
 import { traducirError } from "@/lib/errorTranslator";
 
 interface Config {
@@ -38,6 +38,8 @@ interface NcfSeq {
   secuencia_actual: number;
   secuencia_limite: number;
   activo: boolean;
+  fecha_autorizacion: string | null;
+  fecha_vencimiento: string | null;
 }
 
 const DEFAULT_CONFIG: Config = {
@@ -46,11 +48,13 @@ const DEFAULT_CONFIG: Config = {
   impresion_automatica: false, formato_impresion: "carta", logo_url: "",
 };
 
+// Corrected labels per DGII standard
 const COMPROBANTE_LABELS: Record<string, string> = {
-  B01: "Consumidor Final",
-  B02: "Crédito Fiscal",
-  B14: "Régimen Especial",
-  B15: "Gubernamental",
+  B01: "Crédito Fiscal",
+  B02: "Consumidor Final",
+  B04: "Nota de Crédito",
+  B14: "Gubernamental",
+  B15: "Regímenes Especiales",
 };
 
 export default function Configuraciones() {
@@ -80,9 +84,6 @@ export default function Configuraciones() {
   useEffect(() => {
     localStorage.setItem("posConfig", JSON.stringify(posConfig));
   }, [posConfig]);
-
-  // Print config state
-  // printConfig removed – now stored in main config.formato_impresion
 
   useEffect(() => {
     if (!user) return;
@@ -121,7 +122,6 @@ export default function Configuraciones() {
 
   const handleSaveConfig = async () => {
     setSaving(true);
-    // Para entornos unificados, si ya existe configuración para alguien más pero queremos sobreescribirla o crearla
     const { data: existing } = await supabase.from("configuracion_negocio").select("id, user_id").limit(1).maybeSingle();
     let error;
     if (existing) {
@@ -144,7 +144,12 @@ export default function Configuraciones() {
 
   const handleSaveNcf = async (seq: NcfSeq) => {
     const { error } = await supabase.from("ncf_secuencias")
-      .update({ secuencia_limite: seq.secuencia_limite, activo: seq.activo } as any)
+      .update({
+        secuencia_limite: seq.secuencia_limite,
+        activo: seq.activo,
+        fecha_autorizacion: seq.fecha_autorizacion || null,
+        fecha_vencimiento: seq.fecha_vencimiento || null,
+      } as any)
       .eq("id", seq.id);
     if (error) toast.error(traducirError(error.message));
     else toast.success("Secuencia actualizada");
@@ -163,6 +168,16 @@ export default function Configuraciones() {
   };
 
   const updateField = (field: keyof Config, value: any) => setConfig(prev => ({ ...prev, [field]: value }));
+
+  const getSeqUsagePercent = (seq: NcfSeq) => {
+    if (!seq.secuencia_limite || seq.secuencia_limite === 0) return 0;
+    return Math.round((seq.secuencia_actual / seq.secuencia_limite) * 100);
+  };
+
+  const isSeqExpired = (seq: NcfSeq) => {
+    if (!seq.fecha_vencimiento) return false;
+    return new Date(seq.fecha_vencimiento) < new Date();
+  };
 
   if (permLoading || loading) return <div className="flex items-center justify-center py-20"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>;
 
@@ -200,7 +215,6 @@ export default function Configuraciones() {
               <CardDescription>Información que aparecerá en las facturas y documentos PDF</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Logo preview */}
               {config.logo_url && (
                 <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-muted/30">
                   <img src={config.logo_url} alt="Logo" className="h-14 w-auto object-contain rounded" />
@@ -222,8 +236,9 @@ export default function Configuraciones() {
                   <Input value={config.razon_social} onChange={e => updateField("razon_social", e.target.value)} placeholder="Mi Empresa, S.R.L." />
                 </div>
                 <div className="space-y-2">
-                  <Label>RNC</Label>
-                  <Input value={config.rnc} onChange={e => updateField("rnc", e.target.value)} placeholder="000-00000-0" />
+                  <Label>RNC *</Label>
+                  <Input value={config.rnc} onChange={e => updateField("rnc", e.target.value)} placeholder="000000000" />
+                  <p className="text-xs text-muted-foreground">9 dígitos. Obligatorio para emitir comprobantes fiscales.</p>
                 </div>
                 <div className="space-y-2">
                   <Label>Dirección</Label>
@@ -291,7 +306,7 @@ export default function Configuraciones() {
                 <div key={item.key} className="flex items-center gap-3 p-3 rounded-lg border border-border">
                   <Switch
                     checked={(posConfig as any)[item.key]}
-                    onCheckedChange={v => setPosConfig(prev => ({ ...prev, [item.key]: v }))}
+                    onCheckedChange={v => setPosConfig((prev: any) => ({ ...prev, [item.key]: v }))}
                   />
                   <div>
                     <p className="text-sm font-medium">{item.label}</p>
@@ -373,7 +388,7 @@ export default function Configuraciones() {
                 <div key={item.key} className="flex items-center gap-3 p-3 rounded-lg border border-border">
                   <Switch
                     checked={(posConfig as any)[item.key]}
-                    onCheckedChange={v => setPosConfig(prev => ({ ...prev, [item.key]: v }))}
+                    onCheckedChange={v => setPosConfig((prev: any) => ({ ...prev, [item.key]: v }))}
                   />
                   <div>
                     <p className="text-sm font-medium">{item.label}</p>
@@ -388,14 +403,35 @@ export default function Configuraciones() {
           </Card>
         </TabsContent>
 
-        {/* Fiscal Tab */}
-        <TabsContent value="fiscal" className="mt-4">
+        {/* Fiscal Tab - Enhanced */}
+        <TabsContent value="fiscal" className="mt-4 space-y-4">
           <Card>
             <CardHeader>
               <CardTitle className="text-base">Secuencias NCF (DGII)</CardTitle>
-              <CardDescription>Control de numeración fiscal por tipo de comprobante</CardDescription>
+              <CardDescription>
+                Control de numeración fiscal por tipo de comprobante. Configure los rangos autorizados por la DGII.
+              </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
+              {/* Expired / near-limit alerts */}
+              {ncfSeqs.some(s => isSeqExpired(s) && s.activo) && (
+                <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-sm text-destructive flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <div>
+                    <strong>⚠️ Secuencias vencidas:</strong> Tiene secuencias NCF con fecha de vencimiento expirada. 
+                    No se podrán emitir comprobantes de esos tipos hasta renovar con la DGII.
+                  </div>
+                </div>
+              )}
+              {ncfSeqs.some(s => getSeqUsagePercent(s) >= 90 && s.activo && !isSeqExpired(s)) && (
+                <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-sm text-amber-700 dark:text-amber-400 flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <div>
+                    <strong>⚠️ Secuencias próximas a agotarse:</strong> Solicite nuevos rangos a la DGII antes de quedarse sin comprobantes.
+                  </div>
+                </div>
+              )}
+
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -403,15 +439,20 @@ export default function Configuraciones() {
                     <TableHead>Descripción</TableHead>
                     <TableHead>Actual</TableHead>
                     <TableHead>Límite</TableHead>
+                    <TableHead>Uso</TableHead>
+                    <TableHead>F. Autorización</TableHead>
+                    <TableHead>F. Vencimiento</TableHead>
                     <TableHead>Estado</TableHead>
                     <TableHead></TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {["B01", "B02", "B14", "B15"].map(tipo => {
+                  {["B01", "B02", "B04", "B14", "B15"].map(tipo => {
                     const seq = ncfSeqs.find(s => s.tipo_comprobante === tipo);
+                    const usage = seq ? getSeqUsagePercent(seq) : 0;
+                    const expired = seq ? isSeqExpired(seq) : false;
                     return (
-                      <TableRow key={tipo}>
+                      <TableRow key={tipo} className={expired ? "bg-destructive/5" : usage >= 90 ? "bg-amber-500/5" : ""}>
                         <TableCell className="font-mono font-bold">{tipo}</TableCell>
                         <TableCell className="text-sm">{COMPROBANTE_LABELS[tipo]}</TableCell>
                         <TableCell>{seq ? seq.secuencia_actual : "—"}</TableCell>
@@ -425,8 +466,44 @@ export default function Configuraciones() {
                         </TableCell>
                         <TableCell>
                           {seq ? (
-                            <Badge variant={seq.activo ? "default" : "secondary"}>
-                              {seq.activo ? "Activo" : "Inactivo"}
+                            <div className="flex items-center gap-2">
+                              <div className="w-16 bg-muted rounded-full h-2">
+                                <div
+                                  className={`h-2 rounded-full ${usage >= 90 ? "bg-destructive" : usage >= 70 ? "bg-amber-500" : "bg-primary"}`}
+                                  style={{ width: `${Math.min(usage, 100)}%` }}
+                                />
+                              </div>
+                              <span className="text-xs text-muted-foreground">{usage}%</span>
+                            </div>
+                          ) : "—"}
+                        </TableCell>
+                        <TableCell>
+                          {seq ? (
+                            <Input
+                              type="date" className="w-36 h-8 text-xs"
+                              value={seq.fecha_autorizacion || ""}
+                              onChange={e => setNcfSeqs(prev => prev.map(s => s.id === seq.id ? { ...s, fecha_autorizacion: e.target.value || null } : s))}
+                            />
+                          ) : "—"}
+                        </TableCell>
+                        <TableCell>
+                          {seq ? (
+                            <div className="space-y-1">
+                              <Input
+                                type="date" className={`w-36 h-8 text-xs ${expired ? "border-destructive" : ""}`}
+                                value={seq.fecha_vencimiento || ""}
+                                onChange={e => setNcfSeqs(prev => prev.map(s => s.id === seq.id ? { ...s, fecha_vencimiento: e.target.value || null } : s))}
+                              />
+                              {expired && (
+                                <p className="text-[10px] text-destructive font-medium">VENCIDA</p>
+                              )}
+                            </div>
+                          ) : "—"}
+                        </TableCell>
+                        <TableCell>
+                          {seq ? (
+                            <Badge variant={expired ? "destructive" : seq.activo ? "default" : "secondary"}>
+                              {expired ? "Vencida" : seq.activo ? "Activa" : "Inactiva"}
                             </Badge>
                           ) : (
                             <Badge variant="outline">Sin iniciar</Badge>
@@ -447,11 +524,13 @@ export default function Configuraciones() {
                 </TableBody>
               </Table>
 
-              {ncfSeqs.some(s => s.secuencia_actual > s.secuencia_limite * 0.9) && (
-                <div className="mt-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-sm text-destructive">
-                  ⚠️ Algunas secuencias NCF están cerca del límite. Solicite nuevos rangos a la DGII.
-                </div>
-              )}
+              <div className="p-3 rounded-lg bg-muted/50 border border-border text-xs text-muted-foreground space-y-1">
+                <p><strong>📋 Instrucciones DGII:</strong></p>
+                <p>• Los rangos de secuencias NCF son asignados por la DGII a través de la Oficina Virtual.</p>
+                <p>• Configure la <strong>Fecha de Autorización</strong> y <strong>Fecha de Vencimiento</strong> según la autorización recibida.</p>
+                <p>• El sistema bloqueará la emisión si la secuencia está vencida o agotada.</p>
+                <p>• Se mostrará una alerta cuando el uso supere el 90%.</p>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

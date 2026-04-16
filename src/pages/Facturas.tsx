@@ -14,7 +14,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
-import { Search, FileText, Ban, Download, Printer, MessageCircle, RotateCcw, Eye, DollarSign } from "lucide-react";
+import { Search, FileText, Ban, Download, Printer, MessageCircle, RotateCcw, Eye, DollarSign, Send } from "lucide-react";
 import { Link } from "react-router-dom";
 import { generateInvoicePDF, type NegocioData } from "@/lib/generateInvoicePDF";
 import { exportToExcel } from "@/lib/exportUtils";
@@ -118,6 +118,31 @@ export default function Facturas() {
       load();
     } catch (err: any) {
       toast.error(err.message || "Error al emitir");
+    }
+  };
+
+  const handleGenerarEcf = async (f: Factura) => {
+    if (!f.ncf || !f.tipo_comprobante) {
+      toast.error("La factura debe tener NCF y tipo de comprobante para generar e-CF");
+      return;
+    }
+    // Map NCF type to e-CF type
+    const tipoMap: Record<string, string> = { B01: "31", B02: "32", B14: "44", B15: "31" };
+    const tipo_ecf = tipoMap[f.tipo_comprobante];
+    if (!tipo_ecf) {
+      toast.error(`No se puede generar e-CF para tipo ${f.tipo_comprobante}`);
+      return;
+    }
+    try {
+      const { data, error } = await supabase.functions.invoke("ecf-generate", {
+        body: { factura_id: f.id, tipo_ecf },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(data.mensaje || `e-CF generado: ${data.encf}`);
+      load();
+    } catch (err: any) {
+      toast.error(err.message || "Error al generar e-CF");
     }
   };
 
@@ -243,9 +268,11 @@ export default function Facturas() {
             <SelectItem value="todas">Todas</SelectItem>
             <SelectItem value="borrador">Borrador</SelectItem>
             <SelectItem value="emitida">Emitida</SelectItem>
+            <SelectItem value="enviada_dgii">Enviada DGII</SelectItem>
+            <SelectItem value="aceptada">Aceptada</SelectItem>
+            <SelectItem value="rechazada">Rechazada</SelectItem>
             <SelectItem value="cobrada">Cobrada</SelectItem>
             <SelectItem value="anulada">Anulada</SelectItem>
-            <SelectItem value="activa">Activa (legacy)</SelectItem>
           </SelectContent>
         </Select>
         {(fechaDesde || fechaHasta || estadoFiltro !== "todas") && (
@@ -303,6 +330,11 @@ export default function Facturas() {
                         {f.estado === "borrador" && (
                           <Button variant="ghost" size="icon" onClick={() => handleEmitir(f)} title="Emitir con NCF">
                             <FileText className="h-4 w-4 text-primary" />
+                          </Button>
+                        )}
+                        {f.estado === "emitida" && f.ncf && (
+                          <Button variant="ghost" size="icon" onClick={() => handleGenerarEcf(f)} title="Generar e-CF para DGII">
+                            <Send className="h-4 w-4 text-blue-600" />
                           </Button>
                         )}
                         {["emitida", "activa", "aceptada"].includes(f.estado) && (
