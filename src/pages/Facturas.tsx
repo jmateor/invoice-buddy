@@ -121,6 +121,31 @@ export default function Facturas() {
     }
   };
 
+  const handleGenerarEcf = async (f: Factura) => {
+    if (!f.ncf || !f.tipo_comprobante) {
+      toast.error("La factura debe tener NCF y tipo de comprobante para generar e-CF");
+      return;
+    }
+    // Map NCF type to e-CF type
+    const tipoMap: Record<string, string> = { B01: "31", B02: "32", B14: "44", B15: "31" };
+    const tipo_ecf = tipoMap[f.tipo_comprobante];
+    if (!tipo_ecf) {
+      toast.error(`No se puede generar e-CF para tipo ${f.tipo_comprobante}`);
+      return;
+    }
+    try {
+      const { data, error } = await supabase.functions.invoke("ecf-generate", {
+        body: { factura_id: f.id, tipo_ecf },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(data.mensaje || `e-CF generado: ${data.encf}`);
+      load();
+    } catch (err: any) {
+      toast.error(err.message || "Error al generar e-CF");
+    }
+  };
+
   const handleCobrar = async (f: Factura) => {
     if (!["emitida", "activa", "aceptada"].includes(f.estado)) return;
     const { error } = await supabase.from("facturas").update({ estado: "cobrada" as any }).eq("id", f.id);
