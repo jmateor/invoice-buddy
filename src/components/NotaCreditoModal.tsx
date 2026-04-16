@@ -92,7 +92,12 @@ export default function NotaCreditoModal({ open, onOpenChange, facturaId, factur
 
     setSaving(true);
     try {
-      const ncNumero = `NC-${Date.now().toString().slice(-8)}`;
+      // Generate NCF B04 for credit note
+      const { data: ncfData, error: ncfErr } = await supabase.rpc("next_ncf" as any, {
+        p_user_id: user!.id, p_tipo: "B04"
+      });
+      if (ncfErr) throw ncfErr;
+      const ncNumero = ncfData as string;
 
       // Create nota de crédito with saldo_disponible = total
       const { data: nota, error: notaErr } = await supabase.from("notas_credito").insert({
