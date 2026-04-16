@@ -73,7 +73,7 @@ function generateCartaPDF(data: InvoiceData, action: "download" | "print" | "blo
   doc.setFontSize(10); doc.setFont("helvetica", "normal");
   doc.text(data.numero, pageWidth - 14, 18, { align: "right" });
 
-  // NCF - prominent display
+  // NCF - prominent display (mandatory for fiscal docs)
   if (data.ncf) {
     doc.setFontSize(10); doc.setFont("helvetica", "bold");
     doc.text(`NCF: ${data.ncf}`, pageWidth - 14, 25, { align: "right" });
@@ -104,7 +104,7 @@ function generateCartaPDF(data: InvoiceData, action: "download" | "print" | "blo
     contactY += 4;
   }
 
-  // Client info
+  // Client info box
   doc.setFillColor(245, 247, 250);
   doc.roundedRect(14, contactY, pageWidth - 28, 30, 2, 2, "F");
   doc.setTextColor(30, 58, 95); doc.setFontSize(9); doc.setFont("helvetica", "bold");
@@ -173,15 +173,35 @@ function generateCartaPDF(data: InvoiceData, action: "download" | "print" | "blo
     footerY += 7;
   }
 
-  // Footer
+  // Footer area
   const pageH = doc.internal.pageSize.getHeight();
 
-  // Legal fiscal notice
+  // QR code placeholder area (for future e-CF integration)
   if (data.ncf) {
-    doc.setFontSize(7); doc.setFont("helvetica", "bold"); doc.setTextColor(30, 58, 95);
-    doc.text("DOCUMENTO CON VALOR FISCAL", pageWidth / 2, pageH - 28, { align: "center" });
-    doc.setFont("helvetica", "normal"); doc.setFontSize(7); doc.setTextColor(100, 100, 100);
-    doc.text(`NCF: ${data.ncf}`, pageWidth / 2, pageH - 24, { align: "center" });
+    // QR placeholder box
+    const qrSize = 22;
+    const qrX = 14;
+    const qrY = pageH - 46;
+    doc.setDrawColor(180, 190, 200);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(qrX, qrY, qrSize, qrSize, 1, 1, "S");
+    doc.setFontSize(5.5); doc.setTextColor(150, 150, 150); doc.setFont("helvetica", "normal");
+    doc.text("QR Code", qrX + qrSize / 2, qrY + qrSize / 2 - 1, { align: "center" });
+    doc.text("(e-CF)", qrX + qrSize / 2, qrY + qrSize / 2 + 2.5, { align: "center" });
+
+    // Fiscal legal notice - right of QR
+    const fiscalX = qrX + qrSize + 6;
+    doc.setFontSize(8); doc.setFont("helvetica", "bold"); doc.setTextColor(30, 58, 95);
+    doc.text("DOCUMENTO CON VALOR FISCAL", fiscalX, qrY + 5);
+    doc.setFont("helvetica", "normal"); doc.setFontSize(7.5); doc.setTextColor(60, 60, 60);
+    doc.text(`NCF: ${data.ncf}`, fiscalX, qrY + 10);
+    if (data.tipo_comprobante) {
+      const tipoLabel = tipoComprobanteLabel[data.tipo_comprobante] || data.tipo_comprobante;
+      doc.text(`Tipo: ${tipoLabel}`, fiscalX, qrY + 15);
+    }
+    if (neg?.rnc) {
+      doc.text(`RNC Emisor: ${neg.rnc}`, fiscalX, qrY + 20);
+    }
   }
 
   if (neg?.mensaje_factura) {
@@ -285,7 +305,15 @@ function generateThermalPDF(data: InvoiceData, action: "download" | "print" | "b
     doc.setFontSize(8); doc.setFont("helvetica", "bold"); doc.setTextColor(20, 20, 20);
     doc.text("DOCUMENTO CON VALOR FISCAL", pw / 2, y, { align: "center" }); y += 4;
     doc.setFontSize(7); doc.setFont("helvetica", "normal");
-    doc.text(`NCF: ${data.ncf}`, pw / 2, y, { align: "center" }); y += 4;
+    doc.text(`NCF: ${data.ncf}`, pw / 2, y, { align: "center" }); y += 3.5;
+    if (neg?.rnc) {
+      doc.text(`RNC Emisor: ${neg.rnc}`, pw / 2, y, { align: "center" }); y += 3.5;
+    }
+    if (data.tipo_comprobante) {
+      const tipoLabel = tipoComprobanteLabel[data.tipo_comprobante] || data.tipo_comprobante;
+      doc.text(`Tipo: ${tipoLabel}`, pw / 2, y, { align: "center" }); y += 3.5;
+    }
+    y += 1;
   }
 
   if (data.notas) {
