@@ -318,6 +318,11 @@ export default function NuevaFactura() {
                   ⚠️ Este cliente no tiene RNC/Cédula. Es obligatorio para {tipoComprobante}.
                 </p>
               )}
+              {rncInvalido && (
+                <p className="text-xs text-destructive font-medium">
+                  ⚠️ El RNC/Cédula "{selectedCliente?.rnc_cedula}" no es válido. Debe tener 9 dígitos (empresa) o 11 dígitos (persona).
+                </p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -377,7 +382,7 @@ export default function NuevaFactura() {
               <span>RD$ {total.toLocaleString("es-DO", { minimumFractionDigits: 2 })}</span>
             </div>
             <div className="flex flex-col gap-2 mt-4">
-              <Button onClick={() => handleSave(true)} className="w-full" disabled={saving || (secuenciaStatus !== null && !secuenciaStatus.valido)}>
+              <Button onClick={() => handleSave(true)} className="w-full" disabled={saving || (secuenciaStatus !== null && !secuenciaStatus.valido) || !!clienteSinRNC || !!rncInvalido}>
                 {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <FileText className="mr-2 h-4 w-4" />}
                 Emitir Factura (con NCF)
               </Button>
