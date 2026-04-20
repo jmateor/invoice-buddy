@@ -15,6 +15,9 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Save, Building2, Settings2, Hash, Loader2, Printer, Package, ShieldAlert, MonitorSmartphone, AlertTriangle, Calendar } from "lucide-react";
 import { traducirError } from "@/lib/errorTranslator";
+import EditNumeracionModal from "@/components/ecf/EditNumeracionModal";
+import EcfSetupWizard from "@/components/ecf/EcfSetupWizard";
+import { ShieldCheck, Pencil, Plus } from "lucide-react";
 
 interface Config {
   nombre_comercial: string;
@@ -64,6 +67,8 @@ export default function Configuraciones() {
   const [ncfSeqs, setNcfSeqs] = useState<NcfSeq[]>([]);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [editNumModal, setEditNumModal] = useState<{ open: boolean; id: string | null }>({ open: false, id: null });
+  const [setupWizard, setSetupWizard] = useState(false);
 
   // POS config state
   const [posConfig, setPosConfig] = useState(() => {
