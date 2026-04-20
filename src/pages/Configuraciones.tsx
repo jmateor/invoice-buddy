@@ -411,11 +411,33 @@ export default function Configuraciones() {
         {/* Fiscal Tab - Enhanced */}
         <TabsContent value="fiscal" className="mt-4 space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Secuencias NCF (DGII)</CardTitle>
-              <CardDescription>
-                Control de numeración fiscal por tipo de comprobante. Configure los rangos autorizados por la DGII.
-              </CardDescription>
+            <CardHeader className="flex flex-row items-start justify-between gap-4">
+              <div>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-primary" />
+                  Facturación Electrónica (e-CF)
+                </CardTitle>
+                <CardDescription>
+                  Configura el emisor, ambiente DGII y certificado digital (.pfx) para emitir comprobantes electrónicos.
+                </CardDescription>
+              </div>
+              <Button onClick={() => setSetupWizard(true)} className="shrink-0">
+                <Settings2 className="h-4 w-4 mr-2" /> Configurar e-CF
+              </Button>
+            </CardHeader>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-start justify-between gap-4">
+              <div>
+                <CardTitle className="text-base">Numeración fiscal (NCF/e-CF)</CardTitle>
+                <CardDescription>
+                  Gestiona los rangos autorizados por la DGII por tipo de comprobante. Marca una numeración como "Preferida" para usarla por defecto al facturar.
+                </CardDescription>
+              </div>
+              <Button variant="outline" onClick={() => setEditNumModal({ open: true, id: null })} className="shrink-0">
+                <Plus className="h-4 w-4 mr-2" /> Nueva numeración
+              </Button>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Expired / near-limit alerts */}
