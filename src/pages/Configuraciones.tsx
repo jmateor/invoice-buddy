@@ -567,6 +567,18 @@ export default function Configuraciones() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <EditNumeracionModal
+        open={editNumModal.open}
+        secuenciaId={editNumModal.id}
+        onOpenChange={o => setEditNumModal({ open: o, id: o ? editNumModal.id : null })}
+        onSaved={loadData}
+      />
+      <EcfSetupWizard
+        open={setupWizard}
+        onOpenChange={setSetupWizard}
+        onComplete={loadData}
+      />
     </div>
   );
 
