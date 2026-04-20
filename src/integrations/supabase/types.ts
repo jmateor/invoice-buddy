@@ -342,6 +342,8 @@ export type Database = {
           activo: boolean
           ambiente: string
           certificado_nombre: string | null
+          certificado_password_encrypted: string | null
+          certificado_path: string | null
           certificado_vigencia_hasta: string | null
           created_at: string
           direccion: string | null
@@ -365,6 +367,8 @@ export type Database = {
           activo?: boolean
           ambiente?: string
           certificado_nombre?: string | null
+          certificado_password_encrypted?: string | null
+          certificado_path?: string | null
           certificado_vigencia_hasta?: string | null
           created_at?: string
           direccion?: string | null
@@ -388,6 +392,8 @@ export type Database = {
           activo?: boolean
           ambiente?: string
           certificado_nombre?: string | null
+          certificado_password_encrypted?: string | null
+          certificado_path?: string | null
           certificado_vigencia_hasta?: string | null
           created_at?: string
           direccion?: string | null
@@ -721,10 +727,15 @@ export type Database = {
           fecha_autorizacion: string | null
           fecha_vencimiento: string | null
           id: string
+          nombre: string | null
+          numeracion_automatica: boolean
+          pie_factura: string | null
+          preferida: boolean
           prefijo: string
           secuencia_actual: number
           secuencia_limite: number
           serie: string
+          sucursal: string | null
           tipo_comprobante: string
           user_id: string
         }
@@ -735,10 +746,15 @@ export type Database = {
           fecha_autorizacion?: string | null
           fecha_vencimiento?: string | null
           id?: string
+          nombre?: string | null
+          numeracion_automatica?: boolean
+          pie_factura?: string | null
+          preferida?: boolean
           prefijo?: string
           secuencia_actual?: number
           secuencia_limite?: number
           serie?: string
+          sucursal?: string | null
           tipo_comprobante: string
           user_id: string
         }
@@ -749,10 +765,15 @@ export type Database = {
           fecha_autorizacion?: string | null
           fecha_vencimiento?: string | null
           id?: string
+          nombre?: string | null
+          numeracion_automatica?: boolean
+          pie_factura?: string | null
+          preferida?: boolean
           prefijo?: string
           secuencia_actual?: number
           secuencia_limite?: number
           serie?: string
+          sucursal?: string | null
           tipo_comprobante?: string
           user_id?: string
         }

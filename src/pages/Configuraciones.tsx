@@ -15,6 +15,9 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Save, Building2, Settings2, Hash, Loader2, Printer, Package, ShieldAlert, MonitorSmartphone, AlertTriangle, Calendar } from "lucide-react";
 import { traducirError } from "@/lib/errorTranslator";
+import EditNumeracionModal from "@/components/ecf/EditNumeracionModal";
+import EcfSetupWizard from "@/components/ecf/EcfSetupWizard";
+import { ShieldCheck, Pencil, Plus } from "lucide-react";
 
 interface Config {
   nombre_comercial: string;
@@ -64,6 +67,8 @@ export default function Configuraciones() {
   const [ncfSeqs, setNcfSeqs] = useState<NcfSeq[]>([]);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [editNumModal, setEditNumModal] = useState<{ open: boolean; id: string | null }>({ open: false, id: null });
+  const [setupWizard, setSetupWizard] = useState(false);
 
   // POS config state
   const [posConfig, setPosConfig] = useState(() => {
@@ -406,11 +411,33 @@ export default function Configuraciones() {
         {/* Fiscal Tab - Enhanced */}
         <TabsContent value="fiscal" className="mt-4 space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Secuencias NCF (DGII)</CardTitle>
-              <CardDescription>
-                Control de numeración fiscal por tipo de comprobante. Configure los rangos autorizados por la DGII.
-              </CardDescription>
+            <CardHeader className="flex flex-row items-start justify-between gap-4">
+              <div>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4 text-primary" />
+                  Facturación Electrónica (e-CF)
+                </CardTitle>
+                <CardDescription>
+                  Configura el emisor, ambiente DGII y certificado digital (.pfx) para emitir comprobantes electrónicos.
+                </CardDescription>
+              </div>
+              <Button onClick={() => setSetupWizard(true)} className="shrink-0">
+                <Settings2 className="h-4 w-4 mr-2" /> Configurar e-CF
+              </Button>
+            </CardHeader>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-start justify-between gap-4">
+              <div>
+                <CardTitle className="text-base">Numeración fiscal (NCF/e-CF)</CardTitle>
+                <CardDescription>
+                  Gestiona los rangos autorizados por la DGII por tipo de comprobante. Marca una numeración como "Preferida" para usarla por defecto al facturar.
+                </CardDescription>
+              </div>
+              <Button variant="outline" onClick={() => setEditNumModal({ open: true, id: null })} className="shrink-0">
+                <Plus className="h-4 w-4 mr-2" /> Nueva numeración
+              </Button>
             </CardHeader>
             <CardContent className="space-y-4">
               {/* Expired / near-limit alerts */}
@@ -511,9 +538,14 @@ export default function Configuraciones() {
                         </TableCell>
                         <TableCell>
                           {seq ? (
-                            <Button size="sm" variant="outline" onClick={() => handleSaveNcf(seq)}>
-                              <Save className="h-3 w-3 mr-1" /> Guardar
-                            </Button>
+                            <div className="flex gap-1">
+                              <Button size="sm" variant="outline" onClick={() => handleSaveNcf(seq)} title="Guardar cambios rápidos">
+                                <Save className="h-3 w-3" />
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={() => setEditNumModal({ open: true, id: seq.id })} title="Editar numeración (avanzado)">
+                                <Pencil className="h-3 w-3" />
+                              </Button>
+                            </div>
                           ) : (
                             <Button size="sm" onClick={() => initNcfSeq(tipo)}>Iniciar</Button>
                           )}
@@ -535,6 +567,18 @@ export default function Configuraciones() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <EditNumeracionModal
+        open={editNumModal.open}
+        secuenciaId={editNumModal.id}
+        onOpenChange={o => setEditNumModal({ open: o, id: o ? editNumModal.id : null })}
+        onSaved={loadData}
+      />
+      <EcfSetupWizard
+        open={setupWizard}
+        onOpenChange={setSetupWizard}
+        onComplete={loadData}
+      />
     </div>
   );
 
