@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { traducirError } from "@/lib/errorTranslator";
+import { validateRNC } from "@/lib/validators";
 
 interface Props {
   open: boolean;
@@ -19,10 +20,15 @@ interface Props {
 export default function QuickClientModal({ open, onOpenChange, onCreated }: Props) {
   const { user } = useAuth();
   const [saving, setSaving] = useState(false);
+  const [rncError, setRncError] = useState<string | null>(null);
   const [form, setForm] = useState({ nombre: "", rnc_cedula: "", telefono: "", email: "", direccion: "" });
 
   const handleSave = async () => {
     if (!form.nombre.trim()) { toast.error("El nombre es obligatorio"); return; }
+    if (form.rnc_cedula && !validateRNC(form.rnc_cedula)) {
+      toast.error("El RNC/Cédula debe tener 9 o 11 dígitos numéricos");
+      return;
+    }
     setSaving(true);
     const { data, error } = await supabase
       .from("clientes")
@@ -49,7 +55,21 @@ export default function QuickClientModal({ open, onOpenChange, onCreated }: Prop
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>RNC / Cédula</Label>
-              <Input value={form.rnc_cedula} onChange={e => setForm(f => ({ ...f, rnc_cedula: e.target.value }))} />
+              <Input 
+                value={form.rnc_cedula} 
+                onChange={e => {
+                  const value = e.target.value.replace(/\D/g, '').slice(0, 11);
+                  setForm(f => ({ ...f, rnc_cedula: value }));
+                  if (value && !validateRNC(value)) {
+                    setRncError("Debe tener 9 o 11 dígitos");
+                  } else {
+                    setRncError(null);
+                  }
+                }}
+                placeholder="9 o 11 dígitos"
+                className={rncError ? "border-destructive" : ""}
+              />
+              {rncError && <p className="text-xs text-destructive">{rncError}</p>}
             </div>
             <div className="space-y-2">
               <Label>Teléfono</Label>

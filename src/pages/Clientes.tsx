@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Search, Users, Mail, MessageCircle, Download } from "lucide-react";
 import * as XLSX from "xlsx";
 import { traducirError } from "@/lib/errorTranslator";
+import { validateRNC } from "@/lib/validators";
 
 interface Cliente {
   id: string;
@@ -25,6 +26,7 @@ interface Cliente {
 const emptyCliente = { nombre: "", rnc_cedula: "", direccion: "", telefono: "", email: "" };
 
 export default function Clientes() {
+  const [rncError, setRncError] = useState<string | null>(null);
   const { user } = useAuth();
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [search, setSearch] = useState("");
@@ -41,6 +43,10 @@ export default function Clientes() {
 
   const handleSave = async () => {
     if (!form.nombre.trim()) { toast.error("El nombre es obligatorio"); return; }
+    if (form.rnc_cedula && !validateRNC(form.rnc_cedula)) {
+      toast.error("El RNC/Cédula debe tener 9 o 11 dígitos numéricos");
+      return;
+    }
 
     if (editing) {
       const { error } = await supabase.from("clientes").update(form).eq("id", editing);
@@ -140,7 +146,21 @@ export default function Clientes() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label>RNC / Cédula</Label>
-                    <Input value={form.rnc_cedula} onChange={e => setForm(f => ({ ...f, rnc_cedula: e.target.value }))} />
+                    <Input 
+                      value={form.rnc_cedula} 
+                      onChange={e => {
+                        const value = e.target.value.replace(/\D/g, '').slice(0, 11);
+                        setForm(f => ({ ...f, rnc_cedula: value }));
+                        if (value && !validateRNC(value)) {
+                          setRncError("Debe tener 9 o 11 dígitos");
+                        } else {
+                          setRncError(null);
+                        }
+                      }}
+                      placeholder="9 o 11 dígitos"
+                      className={rncError ? "border-destructive" : ""}
+                    />
+                    {rncError && <p className="text-xs text-destructive">{rncError}</p>}
                   </div>
                   <div className="space-y-2">
                     <Label>Teléfono</Label>
