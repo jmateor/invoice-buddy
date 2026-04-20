@@ -538,9 +538,14 @@ export default function Configuraciones() {
                         </TableCell>
                         <TableCell>
                           {seq ? (
-                            <Button size="sm" variant="outline" onClick={() => handleSaveNcf(seq)}>
-                              <Save className="h-3 w-3 mr-1" /> Guardar
-                            </Button>
+                            <div className="flex gap-1">
+                              <Button size="sm" variant="outline" onClick={() => handleSaveNcf(seq)} title="Guardar cambios rápidos">
+                                <Save className="h-3 w-3" />
+                              </Button>
+                              <Button size="sm" variant="ghost" onClick={() => setEditNumModal({ open: true, id: seq.id })} title="Editar numeración (avanzado)">
+                                <Pencil className="h-3 w-3" />
+                              </Button>
+                            </div>
                           ) : (
                             <Button size="sm" onClick={() => initNcfSeq(tipo)}>Iniciar</Button>
                           )}
