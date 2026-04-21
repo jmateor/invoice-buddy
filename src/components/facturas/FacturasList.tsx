@@ -41,7 +41,7 @@ const ESTADO_CONFIG: Record<string, { label: string; variant: "default" | "secon
   anulada: { label: "Anulada", variant: "destructive" },
 };
 
-export default function Facturas() {
+export default function FacturasList() {
   const { user } = useAuth();
   const [facturas, setFacturas] = useState<Factura[]>([]);
   const [search, setSearch] = useState("");
