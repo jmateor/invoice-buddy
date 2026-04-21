@@ -17,12 +17,11 @@ import Proveedores from "./pages/Proveedores";
 import Reportes from "./pages/Reportes";
 import Compras from "./pages/Compras";
 import Usuarios from "./pages/Usuarios";
+import Ayuda from "./pages/Ayuda";
 import OrdenesServicio from "./pages/OrdenesServicio";
 import Categorias from "./pages/Categorias";
 import Auditoria from "./pages/Auditoria";
 import NotasCredito from "./pages/NotasCredito";
-import ComprobantesElectronicos from "./pages/ComprobantesElectronicos";
-import ReportesDGII from "./pages/ReportesDGII";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -65,8 +64,10 @@ const App = () => (
             <Route path="/categorias" element={<ProtectedRoute><Categorias /></ProtectedRoute>} />
             <Route path="/auditoria" element={<ProtectedRoute><Auditoria /></ProtectedRoute>} />
             <Route path="/notas-credito" element={<ProtectedRoute><NotasCredito /></ProtectedRoute>} />
-            <Route path="/comprobantes-electronicos" element={<ProtectedRoute><ComprobantesElectronicos /></ProtectedRoute>} />
-            <Route path="/reportes-dgii" element={<ProtectedRoute><ReportesDGII /></ProtectedRoute>} />
+            <Route path="/ayuda" element={<ProtectedRoute><Ayuda /></ProtectedRoute>} />
+            {/* Legacy redirects: módulos unificados */}
+            <Route path="/comprobantes-electronicos" element={<Navigate to="/facturas" replace />} />
+            <Route path="/reportes-dgii" element={<Navigate to="/reportes" replace />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

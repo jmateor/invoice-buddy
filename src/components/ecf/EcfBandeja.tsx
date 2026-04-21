@@ -60,7 +60,7 @@ const ESTADOS_BADGE: Record<string, { variant: "default" | "secondary" | "destru
   anulado: { variant: "destructive", label: "Anulado" },
 };
 
-export default function ComprobantesElectronicos() {
+export default function EcfBandeja() {
   const { user } = useAuth();
   const [documentos, setDocumentos] = useState<EcfDocumento[]>([]);
   const [loading, setLoading] = useState(true);
