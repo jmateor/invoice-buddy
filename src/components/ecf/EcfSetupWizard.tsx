@@ -111,9 +111,6 @@ export default function EcfSetupWizard({ open, onOpenChange, onComplete }: Props
         certificado_nombre = data.certificado_file.name;
       }
 
-      // Encrypt password using btoa (placeholder - in production use proper KMS/encryption)
-      const pwdEncrypted = data.certificado_password ? btoa(data.certificado_password) : null;
-
       const payload: any = {
         user_id: user.id,
         rnc: data.rnc.replace(/\D/g, ""),
@@ -136,7 +133,6 @@ export default function EcfSetupWizard({ open, onOpenChange, onComplete }: Props
         payload.certificado_path = certificado_path;
         payload.certificado_nombre = certificado_nombre;
       }
-      if (pwdEncrypted) payload.certificado_password_encrypted = pwdEncrypted;
 
       // Upsert
       const { data: existing } = await supabase.from("ecf_configuracion")
@@ -148,6 +144,18 @@ export default function EcfSetupWizard({ open, onOpenChange, onComplete }: Props
       } else {
         const { error } = await supabase.from("ecf_configuracion").insert(payload);
         if (error) throw error;
+      }
+
+      // Cifrar y guardar la contraseña del .pfx vía edge function (AES-GCM con SERVICE_ROLE_KEY)
+      if (data.certificado_password && certificado_path) {
+        const { error: encErr } = await supabase.functions.invoke("ecf-encrypt-password", {
+          body: {
+            password: data.certificado_password,
+            certificado_path,
+            certificado_nombre,
+          },
+        });
+        if (encErr) throw encErr;
       }
 
       toast.success("Configuración e-CF guardada correctamente");
