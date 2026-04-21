@@ -19,7 +19,6 @@ import {
   Package,
   FileText,
   Truck,
-  Stamp,
   BarChart3,
   LogOut,
   ShoppingCart,
@@ -29,7 +28,7 @@ import {
   ClipboardList,
   Tags,
   RotateCcw,
-  FileSpreadsheet,
+  HelpCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -42,17 +41,16 @@ const mainItems = [
   { title: "Categorías", url: "/categorias", icon: Tags },
   { title: "Facturas", url: "/facturas", icon: FileText },
   { title: "Notas de Crédito", url: "/notas-credito", icon: RotateCcw },
-  { title: "e-CF (DGII)", url: "/comprobantes-electronicos", icon: Stamp },
 ];
 
 const secondaryItems = [
   { title: "Proveedores", url: "/proveedores", icon: Truck },
   { title: "Compras", url: "/compras", icon: ShoppingCart },
   { title: "Reportes", url: "/reportes", icon: BarChart3 },
-  { title: "Reportes DGII", url: "/reportes-dgii", icon: FileSpreadsheet },
   { title: "Usuarios y Roles", url: "/usuarios", icon: Shield },
   { title: "Configuraciones", url: "/configuraciones", icon: Settings },
   { title: "Auditoría", url: "/auditoria", icon: Shield },
+  { title: "Centro de Ayuda", url: "/ayuda", icon: HelpCircle },
 ];
 
 export function AppSidebar() {
@@ -66,7 +64,6 @@ export function AppSidebar() {
     if (item.title === "Auditoría" && !isAdmin) return false;
     if (item.title === "Proveedores" && isCajero) return false;
     if (item.title === "Reportes" && !canExportar) return false;
-    if (item.title === "Reportes DGII" && !canExportar) return false;
     if (item.title === "Compras" && isCajero) return false;
     return true;
   });
