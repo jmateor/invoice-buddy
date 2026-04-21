@@ -3,6 +3,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.96.0';
+import forge from 'https://esm.sh/node-forge@1.3.1';
+import { decryptPassword } from "../_shared/crypto.ts";
 
 /**
  * Edge Function: Cliente DGII para e-CF
@@ -20,34 +22,120 @@ interface DgiiRequest {
   motivo_anulacion?: string;
 }
 
-// Simulación de firma digital (hasta tener certificado .pfx real)
-async function firmarXml(xml: string): Promise<{ xmlFirmado: string; hash: string }> {
-  // En producción: usar certificado .pfx para firmar con XML Signature (XMLDSig)
-  // Por ahora: hash SHA-256 como placeholder
-  const encoder = new TextEncoder();
-  const data = encoder.encode(xml);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  const hash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+// ============================================================
+// FIRMA XMLDSig REAL con certificado .pfx (RSA-SHA256, enveloped)
+// ============================================================
 
-  // Agregar sección de firma al XML
-  const firmaXml = xml.replace(
-    '</ECF>',
-    `  <Signature xmlns="http://www.w3.org/2000/09/xmldsig#">
-    <SignedInfo>
-      <CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
-      <SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"/>
-      <Reference URI="">
-        <DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>
-        <DigestValue>${hash}</DigestValue>
-      </Reference>
-    </SignedInfo>
-    <SignatureValue>PENDIENTE_CERTIFICADO_DIGITAL</SignatureValue>
-  </Signature>
-</ECF>`
-  );
+function bytesToBase64(bytes: Uint8Array): string {
+  let bin = '';
+  for (let i = 0; i < bytes.byteLength; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
 
-  return { xmlFirmado: firmaXml, hash };
+async function sha256Base64(data: string): Promise<string> {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(data));
+  return bytesToBase64(new Uint8Array(buf));
+}
+
+/**
+ * Canonicalización XML simplificada (C14N 1.0):
+ * - Normaliza saltos de línea
+ * - Recorta espacios entre tags
+ * Para validación estricta DGII, se recomienda integrar xml-c14n completo.
+ */
+function canonicalize(xml: string): string {
+  return xml
+    .replace(/\r\n?/g, '\n')
+    .replace(/>\s+</g, '><')
+    .trim();
+}
+
+interface PfxMaterial {
+  privateKey: forge.pki.rsa.PrivateKey;
+  certificatePem: string;
+  certificateBase64: string;
+  vigenciaHasta: string | null;
+}
+
+function loadPfx(pfxBytes: Uint8Array, password: string): PfxMaterial {
+  const der = forge.util.createBuffer(pfxBytes);
+  const asn1 = forge.asn1.fromDer(der);
+  const p12 = forge.pkcs12.pkcs12FromAsn1(asn1, false, password);
+
+  // Extract private key
+  const keyBags = p12.getBags({ bagType: forge.pki.oids.pkcs8ShroudedKeyBag });
+  const keyBag = keyBags[forge.pki.oids.pkcs8ShroudedKeyBag]?.[0]
+    || p12.getBags({ bagType: forge.pki.oids.keyBag })[forge.pki.oids.keyBag]?.[0];
+  if (!keyBag?.key) throw new Error('No se encontró clave privada en el .pfx');
+
+  // Extract certificate
+  const certBags = p12.getBags({ bagType: forge.pki.oids.certBag });
+  const certBag = certBags[forge.pki.oids.certBag]?.[0];
+  if (!certBag?.cert) throw new Error('No se encontró certificado en el .pfx');
+
+  const cert = certBag.cert;
+  const certPem = forge.pki.certificateToPem(cert);
+  const certDer = forge.asn1.toDer(forge.pki.certificateToAsn1(cert)).getBytes();
+  const certBase64 = forge.util.encode64(certDer);
+
+  return {
+    privateKey: keyBag.key as forge.pki.rsa.PrivateKey,
+    certificatePem: certPem,
+    certificateBase64: certBase64,
+    vigenciaHasta: cert.validity?.notAfter?.toISOString() ?? null,
+  };
+}
+
+async function firmarXml(
+  xml: string,
+  pfxBytes: Uint8Array,
+  password: string,
+): Promise<{ xmlFirmado: string; hash: string; vigenciaHasta: string | null }> {
+  const material = loadPfx(pfxBytes, password);
+
+  // 1) Quitar firma previa si existe y canonicalizar
+  const xmlBody = canonicalize(xml.replace(/<Signature[\s\S]*?<\/Signature>/g, ''));
+  const digestValue = await sha256Base64(xmlBody);
+
+  // 2) Construir SignedInfo
+  const signedInfo =
+    `<SignedInfo xmlns="http://www.w3.org/2000/09/xmldsig#">` +
+    `<CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>` +
+    `<SignatureMethod Algorithm="http://www.w3.org/2001/04/xmldsig-more#rsa-sha256"/>` +
+    `<Reference URI="">` +
+    `<Transforms><Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/></Transforms>` +
+    `<DigestMethod Algorithm="http://www.w3.org/2001/04/xmlenc#sha256"/>` +
+    `<DigestValue>${digestValue}</DigestValue>` +
+    `</Reference>` +
+    `</SignedInfo>`;
+
+  // 3) Firmar SignedInfo con RSA-SHA256
+  const md = forge.md.sha256.create();
+  md.update(signedInfo, 'utf8');
+  const signatureBytes = material.privateKey.sign(md);
+  const signatureValue = forge.util.encode64(signatureBytes);
+
+  // 4) Construir bloque Signature completo
+  const signatureBlock =
+    `<Signature xmlns="http://www.w3.org/2000/09/xmldsig#">` +
+    signedInfo +
+    `<SignatureValue>${signatureValue}</SignatureValue>` +
+    `<KeyInfo><X509Data><X509Certificate>${material.certificateBase64}</X509Certificate></X509Data></KeyInfo>` +
+    `</Signature>`;
+
+  // 5) Insertar antes del cierre de la raíz
+  const rootCloseMatch = xmlBody.match(/<\/([A-Za-z0-9_:]+)>\s*$/);
+  if (!rootCloseMatch) throw new Error('No se pudo localizar el cierre del XML para insertar la firma');
+  const rootName = rootCloseMatch[1];
+  const xmlFirmado = xmlBody.replace(new RegExp(`</${rootName}>\\s*$`), `${signatureBlock}</${rootName}>`);
+
+  return { xmlFirmado, hash: digestValue, vigenciaHasta: material.vigenciaHasta };
+}
+
+async function loadPfxFromStorage(supabase: ReturnType<typeof createClient>, path: string): Promise<Uint8Array> {
+  const { data, error } = await supabase.storage.from('certificados-ecf').download(path);
+  if (error || !data) throw new Error(`No se pudo descargar el certificado: ${error?.message || 'archivo no encontrado'}`);
+  return new Uint8Array(await data.arrayBuffer());
 }
 
 // Simulación de comunicación con DGII
@@ -181,12 +269,27 @@ Deno.serve(async (req) => {
           });
         }
 
-        const { xmlFirmado, hash } = await firmarXml(doc.xml_sin_firma);
+        if (!config.certificado_path || !config.certificado_password_encrypted) {
+          return new Response(JSON.stringify({ error: 'No hay certificado .pfx configurado. Súbelo desde Configuraciones → Fiscal → Configurar e-CF.' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        const pwd = await decryptPassword(config.certificado_password_encrypted);
+        const pfxBytes = await loadPfxFromStorage(supabase, config.certificado_path);
+        const { xmlFirmado, hash, vigenciaHasta } = await firmarXml(doc.xml_sin_firma, pfxBytes, pwd);
 
         await supabase
           .from('ecf_documentos')
           .update({ xml_firmado: xmlFirmado, hash_firma: hash, updated_at: new Date().toISOString() })
           .eq('id', ecf_documento_id);
+
+        if (vigenciaHasta) {
+          await supabase
+            .from('ecf_configuracion')
+            .update({ certificado_vigencia_hasta: vigenciaHasta })
+            .eq('user_id', user.id);
+        }
 
         await supabase.from('ecf_historial_estados').insert({
           user_id: user.id,
@@ -212,7 +315,15 @@ Deno.serve(async (req) => {
         // Si no está firmado, firmar primero
         let xmlFirmado = doc.xml_firmado;
         if (!xmlFirmado) {
-          const firma = await firmarXml(doc.xml_sin_firma!);
+          if (!config.certificado_path || !config.certificado_password_encrypted) {
+            return new Response(JSON.stringify({ error: 'No hay certificado .pfx configurado para firmar antes de enviar.' }), {
+              status: 400,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            });
+          }
+          const pwd = await decryptPassword(config.certificado_password_encrypted);
+          const pfxBytes = await loadPfxFromStorage(supabase, config.certificado_path);
+          const firma = await firmarXml(doc.xml_sin_firma!, pfxBytes, pwd);
           xmlFirmado = firma.xmlFirmado;
           await supabase
             .from('ecf_documentos')
