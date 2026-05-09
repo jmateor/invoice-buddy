@@ -111,27 +111,81 @@ export type Database = {
         Row: {
           created_at: string
           fecha: string
+          fecha_pago: string | null
+          forma_pago: string
           id: string
+          isc: number
+          isr_percibido: number
+          itbis_costo: number
+          itbis_facturado: number
+          itbis_percibido: number
+          itbis_proporcionalidad: number
+          itbis_retenido: number
+          monto_bienes: number
+          monto_retencion_isr: number
+          monto_servicios: number
+          ncf: string | null
+          ncf_modificado: string | null
           notas: string | null
+          otros_impuestos: number
+          propina_legal: number
           proveedor_id: string
+          tipo_bienes_servicios: string | null
+          tipo_retencion_isr: string | null
           total: number
           user_id: string
         }
         Insert: {
           created_at?: string
           fecha?: string
+          fecha_pago?: string | null
+          forma_pago?: string
           id?: string
+          isc?: number
+          isr_percibido?: number
+          itbis_costo?: number
+          itbis_facturado?: number
+          itbis_percibido?: number
+          itbis_proporcionalidad?: number
+          itbis_retenido?: number
+          monto_bienes?: number
+          monto_retencion_isr?: number
+          monto_servicios?: number
+          ncf?: string | null
+          ncf_modificado?: string | null
           notas?: string | null
+          otros_impuestos?: number
+          propina_legal?: number
           proveedor_id: string
+          tipo_bienes_servicios?: string | null
+          tipo_retencion_isr?: string | null
           total?: number
           user_id: string
         }
         Update: {
           created_at?: string
           fecha?: string
+          fecha_pago?: string | null
+          forma_pago?: string
           id?: string
+          isc?: number
+          isr_percibido?: number
+          itbis_costo?: number
+          itbis_facturado?: number
+          itbis_percibido?: number
+          itbis_proporcionalidad?: number
+          itbis_retenido?: number
+          monto_bienes?: number
+          monto_retencion_isr?: number
+          monto_servicios?: number
+          ncf?: string | null
+          ncf_modificado?: string | null
           notas?: string | null
+          otros_impuestos?: number
+          propina_legal?: number
           proveedor_id?: string
+          tipo_bienes_servicios?: string | null
+          tipo_retencion_isr?: string | null
           total?: number
           user_id?: string
         }
@@ -336,6 +390,84 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      dgii_catalogos: {
+        Row: {
+          catalogo: string
+          codigo: string
+          descripcion: string
+          id: string
+          orden: number
+        }
+        Insert: {
+          catalogo: string
+          codigo: string
+          descripcion: string
+          id?: string
+          orden?: number
+        }
+        Update: {
+          catalogo?: string
+          codigo?: string
+          descripcion?: string
+          id?: string
+          orden?: number
+        }
+        Relationships: []
+      }
+      dgii_periodos_remitidos: {
+        Row: {
+          archivo_excel_path: string | null
+          archivo_txt_path: string | null
+          cantidad_registros: number
+          created_at: string
+          estado: string
+          fecha_generacion: string | null
+          fecha_remision: string | null
+          id: string
+          notas: string | null
+          periodo: string
+          tipo: string
+          total_itbis: number
+          total_monto: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          archivo_excel_path?: string | null
+          archivo_txt_path?: string | null
+          cantidad_registros?: number
+          created_at?: string
+          estado?: string
+          fecha_generacion?: string | null
+          fecha_remision?: string | null
+          id?: string
+          notas?: string | null
+          periodo: string
+          tipo: string
+          total_itbis?: number
+          total_monto?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          archivo_excel_path?: string | null
+          archivo_txt_path?: string | null
+          cantidad_registros?: number
+          created_at?: string
+          estado?: string
+          fecha_generacion?: string | null
+          fecha_remision?: string | null
+          id?: string
+          notas?: string | null
+          periodo?: string
+          tipo?: string
+          total_itbis?: number
+          total_monto?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       ecf_configuracion: {
         Row: {
@@ -610,15 +742,34 @@ export type Database = {
           descuento: number
           estado: Database["public"]["Enums"]["estado_factura"]
           fecha: string
+          fecha_anulacion: string | null
+          fecha_retencion: string | null
           id: string
+          isc: number
+          isr_percibido: number
           itbis: number
+          itbis_percibido: number
+          itbis_retenido_terceros: number
           metodo_pago: Database["public"]["Enums"]["metodo_pago"]
+          monto_bonos: number
+          monto_cheque: number
+          monto_credito: number
+          monto_efectivo: number
+          monto_otros: number
+          monto_permuta: number
+          monto_tarjeta: number
+          motivo_anulacion: string | null
           ncf: string | null
+          ncf_modificado: string | null
           nota_credito_id: string | null
           notas: string | null
           numero: string
+          otros_impuestos: number
+          propina_legal: number
+          retencion_isr_terceros: number
           subtotal: number
           tipo_comprobante: string | null
+          tipo_ingreso: string
           total: number
           user_id: string
         }
@@ -628,15 +779,34 @@ export type Database = {
           descuento?: number
           estado?: Database["public"]["Enums"]["estado_factura"]
           fecha?: string
+          fecha_anulacion?: string | null
+          fecha_retencion?: string | null
           id?: string
+          isc?: number
+          isr_percibido?: number
           itbis?: number
+          itbis_percibido?: number
+          itbis_retenido_terceros?: number
           metodo_pago?: Database["public"]["Enums"]["metodo_pago"]
+          monto_bonos?: number
+          monto_cheque?: number
+          monto_credito?: number
+          monto_efectivo?: number
+          monto_otros?: number
+          monto_permuta?: number
+          monto_tarjeta?: number
+          motivo_anulacion?: string | null
           ncf?: string | null
+          ncf_modificado?: string | null
           nota_credito_id?: string | null
           notas?: string | null
           numero: string
+          otros_impuestos?: number
+          propina_legal?: number
+          retencion_isr_terceros?: number
           subtotal?: number
           tipo_comprobante?: string | null
+          tipo_ingreso?: string
           total?: number
           user_id: string
         }
@@ -646,15 +816,34 @@ export type Database = {
           descuento?: number
           estado?: Database["public"]["Enums"]["estado_factura"]
           fecha?: string
+          fecha_anulacion?: string | null
+          fecha_retencion?: string | null
           id?: string
+          isc?: number
+          isr_percibido?: number
           itbis?: number
+          itbis_percibido?: number
+          itbis_retenido_terceros?: number
           metodo_pago?: Database["public"]["Enums"]["metodo_pago"]
+          monto_bonos?: number
+          monto_cheque?: number
+          monto_credito?: number
+          monto_efectivo?: number
+          monto_otros?: number
+          monto_permuta?: number
+          monto_tarjeta?: number
+          motivo_anulacion?: string | null
           ncf?: string | null
+          ncf_modificado?: string | null
           nota_credito_id?: string | null
           notas?: string | null
           numero?: string
+          otros_impuestos?: number
+          propina_legal?: number
+          retencion_isr_terceros?: number
           subtotal?: number
           tipo_comprobante?: string | null
+          tipo_ingreso?: string
           total?: number
           user_id?: string
         }
