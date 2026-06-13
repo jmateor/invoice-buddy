@@ -25,6 +25,22 @@ export default function Auth() {
     setLoading(false);
   };
 
+  const handlePasswordReset = async () => {
+    if (!email) {
+      toast.error("Escribe tu email para enviarte el enlace de recuperación");
+      return;
+    }
+
+    setLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+
+    if (error) toast.error(traducirError(error.message));
+    else toast.success("Te enviamos un enlace para cambiar tu contraseña");
+    setLoading(false);
+  };
+
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -73,6 +89,14 @@ export default function Auth() {
                     <Label htmlFor="login-password">Contraseña</Label>
                     <Input id="login-password" type="password" value={password} onChange={e => setPassword(e.target.value)} required placeholder="••••••••" />
                   </div>
+                  <button
+                    type="button"
+                    onClick={handlePasswordReset}
+                    disabled={loading}
+                    className="text-sm text-primary hover:underline disabled:opacity-60"
+                  >
+                    ¿Olvidaste tu contraseña?
+                  </button>
                   <Button type="submit" className="w-full" disabled={loading}>
                     {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Iniciar Sesión
