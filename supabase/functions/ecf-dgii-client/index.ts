@@ -138,54 +138,160 @@ async function loadPfxFromStorage(supabase: ReturnType<typeof createClient>, pat
   return new Uint8Array(await data.arrayBuffer());
 }
 
-// Simulación de comunicación con DGII
-async function enviarADgii(config: any, xmlFirmado: string, encf: string): Promise<{
-  trackId: string;
-  estado: string;
-  mensaje: string;
-  codigo: string;
-}> {
-  // En producción real:
-  // 1. Obtener Seed de autenticación: GET config.url_autenticacion
-  // 2. Firmar Seed con certificado
-  // 3. Obtener Token: POST con seed firmado
-  // 4. Enviar e-CF: POST config.url_recepcion con XML firmado y token
-  // 5. Recibir TrackID
-  
-  // Simulación para ambiente de pruebas
-  const trackId = `TRK-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  
-  return {
-    trackId,
-    estado: 'en_proceso',
-    mensaje: `e-CF ${encf} enviado exitosamente al ambiente ${config.ambiente}. TrackID: ${trackId}`,
-    codigo: '200',
-  };
+// ============================================================
+// COMUNICACIÓN REAL CON DGII (TesteCF / CerteCF / Producción)
+// ============================================================
+
+function deriveUrl(base: string | null | undefined, endpoint: string, fallbackAmbiente: string): string {
+  if (base) {
+    // Reemplaza el último segmento por el endpoint deseado
+    return base.replace(/\/[^/]+$/, `/${endpoint}`);
+  }
+  const amb = fallbackAmbiente === 'eCF' ? 'eCF' : fallbackAmbiente;
+  return `https://ecf.dgii.gov.do/${amb}/${endpoint}`;
 }
 
-async function consultarEstado(config: any, trackId: string): Promise<{
-  estado: string;
-  mensaje: string;
-  codigo: string;
-}> {
-  // En producción: GET config.url_consulta_estado?TrackId=XXX con token
-  // Simulación
-  return {
-    estado: 'aceptado',
-    mensaje: 'Documento aceptado por la DGII',
-    codigo: '1',
-  };
+/**
+ * Mapea códigos DGII a estados internos.
+ * Códigos DGII: 1=aceptado, 2=aceptado condicional, 3=rechazado,
+ * 4=en proceso, 5=aceptado por vencimiento, 6=enviado.
+ */
+function mapearEstadoDgii(codigo: string | number | null | undefined): string {
+  const c = String(codigo ?? '');
+  switch (c) {
+    case '1': return 'aceptado';
+    case '2': return 'aceptado_condicional';
+    case '3': return 'rechazado';
+    case '4': return 'en_proceso';
+    case '5': return 'aceptado_vencimiento';
+    case '6': return 'enviado';
+    default: return 'en_proceso';
+  }
 }
 
-async function anularEcf(config: any, encf: string, motivo: string): Promise<{
-  estado: string;
-  mensaje: string;
-}> {
-  // En producción: POST config.url_anulacion con e-NCF y motivo
-  return {
-    estado: 'anulado',
-    mensaje: `e-NCF ${encf} anulado exitosamente`,
-  };
+async function obtenerSemillaDgii(urlAutenticacion: string): Promise<string> {
+  const url = deriveUrl(urlAutenticacion, 'Autenticacion/api/Autenticacion/Semilla', 'TesteCF');
+  const res = await fetch(url, { method: 'GET', headers: { 'Accept': 'application/xml' } });
+  if (!res.ok) {
+    // Fallback: el endpoint legado devolvía la semilla directo en url_autenticacion
+    const legacy = await fetch(urlAutenticacion, { method: 'GET' });
+    if (!legacy.ok) throw new Error(`DGII Semilla falló: HTTP ${res.status}`);
+    return await legacy.text();
+  }
+  return await res.text();
+}
+
+async function validarSemillaYObtenerToken(
+  urlAutenticacion: string,
+  semillaFirmadaXml: string,
+): Promise<string> {
+  const url = deriveUrl(urlAutenticacion, 'Autenticacion/api/Autenticacion/ValidacionCSC', 'TesteCF');
+  const form = new FormData();
+  form.append('xml', new Blob([semillaFirmadaXml], { type: 'application/xml' }), 'semilla.xml');
+  const res = await fetch(url, { method: 'POST', body: form });
+  const text = await res.text();
+  if (!res.ok) throw new Error(`DGII ValidacionCSC falló (${res.status}): ${text.slice(0, 300)}`);
+  let parsed: any;
+  try { parsed = JSON.parse(text); } catch { throw new Error(`Respuesta token inválida: ${text.slice(0, 200)}`); }
+  const token = parsed?.token || parsed?.Token || parsed?.access_token;
+  if (!token) throw new Error('DGII no devolvió token de autenticación');
+  return token;
+}
+
+async function autenticarDgii(
+  config: any,
+  pfxBytes: Uint8Array,
+  password: string,
+): Promise<string> {
+  const semilla = await obtenerSemillaDgii(config.url_autenticacion);
+  const { xmlFirmado } = await firmarXml(semilla, pfxBytes, password);
+  return await validarSemillaYObtenerToken(config.url_autenticacion, xmlFirmado);
+}
+
+async function enviarADgii(
+  config: any,
+  xmlFirmado: string,
+  encf: string,
+  token: string,
+): Promise<{ trackId: string; estado: string; mensaje: string; codigo: string }> {
+  const url = config.url_recepcion as string;
+  const form = new FormData();
+  form.append('xml', new Blob([xmlFirmado], { type: 'application/xml' }), `${encf}.xml`);
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}` },
+    body: form,
+  });
+  const text = await res.text();
+  let parsed: any = {};
+  try { parsed = JSON.parse(text); } catch { parsed = { mensaje: text }; }
+  if (!res.ok) {
+    throw new Error(`DGII Recepción falló (${res.status}): ${parsed?.mensaje || text.slice(0, 300)}`);
+  }
+  const trackId = parsed?.trackId || parsed?.TrackId || parsed?.track_id || '';
+  const codigo = String(parsed?.codigo ?? parsed?.Codigo ?? parsed?.estado ?? '6');
+  const mensaje = parsed?.mensaje || parsed?.Mensaje || parsed?.mensajes?.[0]?.valor || `e-CF ${encf} recibido por DGII`;
+  if (!trackId) throw new Error(`DGII no devolvió TrackID. Respuesta: ${text.slice(0, 200)}`);
+  return { trackId, estado: mapearEstadoDgii(codigo), mensaje, codigo };
+}
+
+async function consultarEstado(
+  config: any,
+  trackId: string,
+  token: string,
+): Promise<{ estado: string; mensaje: string; codigo: string }> {
+  const url = `${config.url_consulta_estado}?trackId=${encodeURIComponent(trackId)}`;
+  const res = await fetch(url, {
+    method: 'GET',
+    headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' },
+  });
+  const text = await res.text();
+  let parsed: any = {};
+  try { parsed = JSON.parse(text); } catch { parsed = { mensaje: text }; }
+  if (!res.ok) throw new Error(`DGII ConsultaEstado falló (${res.status}): ${parsed?.mensaje || text.slice(0, 200)}`);
+  const codigo = String(parsed?.codigo ?? parsed?.Codigo ?? parsed?.estado ?? '4');
+  const mensaje = parsed?.mensaje || parsed?.Mensaje || parsed?.mensajes?.[0]?.valor || 'Estado consultado';
+  return { estado: mapearEstadoDgii(codigo), mensaje, codigo };
+}
+
+async function anularEcf(
+  config: any,
+  encf: string,
+  motivo: string,
+  rnc: string,
+  pfxBytes: Uint8Array,
+  password: string,
+  token: string,
+): Promise<{ estado: string; mensaje: string }> {
+  // XML de anulación según esquema DGII
+  const ahora = new Date();
+  const fecha = `${ahora.getFullYear()}-${String(ahora.getMonth()+1).padStart(2,'0')}-${String(ahora.getDate()).padStart(2,'0')}`;
+  const anulXml =
+    `<?xml version="1.0" encoding="UTF-8"?>` +
+    `<ANECF>` +
+    `<Encabezado><Version>1.0</Version>` +
+    `<RNCEmisor>${rnc}</RNCEmisor>` +
+    `<FechaHoraAnulacionENCF>${fecha}</FechaHoraAnulacionENCF>` +
+    `<CantidadENCFAnulados>1</CantidadENCFAnulados>` +
+    `</Encabezado>` +
+    `<DetalleAnulacionENCF>` +
+    `<eNCF>${encf}</eNCF>` +
+    `<MotivoAnulacion>${motivo.replace(/[<>&]/g, '')}</MotivoAnulacion>` +
+    `</DetalleAnulacionENCF>` +
+    `</ANECF>`;
+  const { xmlFirmado } = await firmarXml(anulXml, pfxBytes, password);
+  const form = new FormData();
+  form.append('xml', new Blob([xmlFirmado], { type: 'application/xml' }), `ANUL_${encf}.xml`);
+  const res = await fetch(config.url_anulacion, {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}` },
+    body: form,
+  });
+  const text = await res.text();
+  let parsed: any = {};
+  try { parsed = JSON.parse(text); } catch { parsed = { mensaje: text }; }
+  if (!res.ok) throw new Error(`DGII Anulación falló (${res.status}): ${parsed?.mensaje || text.slice(0, 200)}`);
+  return { estado: 'anulado', mensaje: parsed?.mensaje || `e-NCF ${encf} anulado exitosamente` };
 }
 
 Deno.serve(async (req) => {
@@ -312,17 +418,18 @@ Deno.serve(async (req) => {
           });
         }
 
-        // Si no está firmado, firmar primero
+        if (!config.certificado_path || !config.certificado_password_encrypted) {
+          return new Response(JSON.stringify({ error: 'No hay certificado .pfx configurado para autenticar con DGII.' }), {
+            status: 400,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        const pwd = await decryptPassword(config.certificado_password_encrypted);
+        const pfxBytes = await loadPfxFromStorage(supabase, config.certificado_path);
+
+        // Firmar si aún no está firmado
         let xmlFirmado = doc.xml_firmado;
         if (!xmlFirmado) {
-          if (!config.certificado_path || !config.certificado_password_encrypted) {
-            return new Response(JSON.stringify({ error: 'No hay certificado .pfx configurado para firmar antes de enviar.' }), {
-              status: 400,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            });
-          }
-          const pwd = await decryptPassword(config.certificado_password_encrypted);
-          const pfxBytes = await loadPfxFromStorage(supabase, config.certificado_path);
           const firma = await firmarXml(doc.xml_sin_firma!, pfxBytes, pwd);
           xmlFirmado = firma.xmlFirmado;
           await supabase
@@ -331,7 +438,9 @@ Deno.serve(async (req) => {
             .eq('id', ecf_documento_id);
         }
 
-        const envio = await enviarADgii(config, xmlFirmado, doc.encf);
+        // Autenticar y enviar
+        const token = await autenticarDgii(config, pfxBytes, pwd);
+        const envio = await enviarADgii(config, xmlFirmado, doc.encf, token);
 
         await supabase
           .from('ecf_documentos')
@@ -367,7 +476,15 @@ Deno.serve(async (req) => {
           });
         }
 
-        const consulta = await consultarEstado(config, doc.track_id);
+        if (!config.certificado_path || !config.certificado_password_encrypted) {
+          return new Response(JSON.stringify({ error: 'No hay certificado .pfx configurado para autenticar con DGII.' }), {
+            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        const pwdC = await decryptPassword(config.certificado_password_encrypted);
+        const pfxBytesC = await loadPfxFromStorage(supabase, config.certificado_path);
+        const tokenC = await autenticarDgii(config, pfxBytesC, pwdC);
+        const consulta = await consultarEstado(config, doc.track_id, tokenC);
 
         await supabase
           .from('ecf_documentos')
@@ -401,7 +518,15 @@ Deno.serve(async (req) => {
           });
         }
 
-        const anulacion = await anularEcf(config, doc.encf, motivo_anulacion);
+        if (!config.certificado_path || !config.certificado_password_encrypted) {
+          return new Response(JSON.stringify({ error: 'No hay certificado .pfx configurado para anular en DGII.' }), {
+            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          });
+        }
+        const pwdA = await decryptPassword(config.certificado_password_encrypted);
+        const pfxBytesA = await loadPfxFromStorage(supabase, config.certificado_path);
+        const tokenA = await autenticarDgii(config, pfxBytesA, pwdA);
+        const anulacion = await anularEcf(config, doc.encf, motivo_anulacion, config.rnc, pfxBytesA, pwdA, tokenA);
 
         await supabase
           .from('ecf_documentos')
