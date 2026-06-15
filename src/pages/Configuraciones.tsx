@@ -18,6 +18,7 @@ import { traducirError } from "@/lib/errorTranslator";
 import EditNumeracionModal from "@/components/ecf/EditNumeracionModal";
 import EcfSetupWizard from "@/components/ecf/EcfSetupWizard";
 import { ShieldCheck, Pencil, Plus, KeyRound, CheckCircle2, XCircle } from "lucide-react";
+import DgiiCodigoDiagnostico from "@/components/ecf/DgiiCodigoDiagnostico";
 
 interface Config {
   nombre_comercial: string;
@@ -497,6 +498,9 @@ export default function Configuraciones() {
                     {pruebaResult.token_preview && <div className="sm:col-span-2"><strong>Token:</strong> <code>{pruebaResult.token_preview}</code></div>}
                     {pruebaResult.url_autenticacion && <div className="sm:col-span-2 truncate"><strong>URL Auth:</strong> {pruebaResult.url_autenticacion}</div>}
                   </div>
+                  {!pruebaResult.success && (
+                    <DgiiCodigoDiagnostico codigo={pruebaResult.codigo} />
+                  )}
                 </div>
               )}
             </CardContent>
