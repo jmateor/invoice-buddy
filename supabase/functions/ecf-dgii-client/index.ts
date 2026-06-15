@@ -17,8 +17,8 @@ import { decryptPassword } from "../_shared/crypto.ts";
  */
 
 interface DgiiRequest {
-  action: 'firmar' | 'enviar' | 'consultar' | 'anular';
-  ecf_documento_id: string;
+  action: 'firmar' | 'enviar' | 'consultar' | 'anular' | 'probar';
+  ecf_documento_id?: string;
   motivo_anulacion?: string;
 }
 
@@ -328,28 +328,14 @@ Deno.serve(async (req) => {
     const body: DgiiRequest = await req.json();
     const { action, ecf_documento_id, motivo_anulacion } = body;
 
-    if (!action || !ecf_documento_id) {
-      return new Response(JSON.stringify({ error: 'Acción y ID de documento son requeridos' }), {
+    if (!action) {
+      return new Response(JSON.stringify({ error: 'Acción requerida' }), {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
-    // Obtener documento
-    const { data: doc, error: docError } = await supabase
-      .from('ecf_documentos')
-      .select('*')
-      .eq('id', ecf_documento_id)
-      .single();
-
-    if (!doc) {
-      return new Response(JSON.stringify({ error: 'Documento e-CF no encontrado' }), {
-        status: 404,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Obtener configuración
+    // Obtener configuración (requerida para todas las acciones)
     const { data: config } = await supabase
       .from('ecf_configuracion')
       .select('*')
@@ -364,9 +350,99 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Para acciones sobre documentos específicos
+    let doc: any = null;
+    if (action !== 'probar') {
+      if (!ecf_documento_id) {
+        return new Response(JSON.stringify({ error: 'ID de documento requerido' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      const { data: d } = await supabase
+        .from('ecf_documentos')
+        .select('*')
+        .eq('id', ecf_documento_id)
+        .single();
+      if (!d) {
+        return new Response(JSON.stringify({ error: 'Documento e-CF no encontrado' }), {
+          status: 404,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      doc = d;
+    }
+
     let resultado: any = {};
 
     switch (action) {
+      case 'probar': {
+        // Valida certificado .pfx + autenticación contra DGII (TesteCF/CerteCF/Producción)
+        if (!config.certificado_path || !config.certificado_password_encrypted) {
+          return new Response(JSON.stringify({
+            error: 'No hay certificado .pfx configurado. Súbelo desde Configurar e-CF.',
+            codigo: 'SIN_CERTIFICADO',
+          }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+        if (!config.url_autenticacion) {
+          return new Response(JSON.stringify({
+            error: 'URL de autenticación DGII no configurada.',
+            codigo: 'SIN_URL_AUTH',
+          }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+        const t0 = Date.now();
+        try {
+          const pwd = await decryptPassword(config.certificado_password_encrypted);
+          const pfxBytes = await loadPfxFromStorage(supabase, config.certificado_path);
+          // 1) Cargar y validar PFX
+          const material = loadPfx(pfxBytes, pwd);
+          const vigenciaHasta = material.vigenciaHasta;
+          const vencido = vigenciaHasta ? new Date(vigenciaHasta) < new Date() : false;
+          // 2) Pedir semilla
+          const semilla = await obtenerSemillaDgii(config.url_autenticacion);
+          // 3) Firmar semilla
+          const { xmlFirmado } = await firmarXml(semilla, pfxBytes, pwd);
+          // 4) Validar y obtener token
+          const token = await validarSemillaYObtenerToken(config.url_autenticacion, xmlFirmado);
+
+          // Actualizar vigencia detectada
+          if (vigenciaHasta) {
+            await supabase
+              .from('ecf_configuracion')
+              .update({ certificado_vigencia_hasta: vigenciaHasta })
+              .eq('user_id', user.id);
+          }
+
+          resultado = {
+            success: true,
+            mensaje: '✅ Firma digital y autenticación con DGII exitosas',
+            codigo: '200',
+            ambiente: config.ambiente,
+            url_autenticacion: config.url_autenticacion,
+            certificado_vigencia_hasta: vigenciaHasta,
+            certificado_vencido: vencido,
+            token_obtenido: true,
+            token_preview: typeof token === 'string' ? `${token.slice(0, 20)}…(${token.length} chars)` : null,
+            duracion_ms: Date.now() - t0,
+          };
+        } catch (e: any) {
+          const msg = String(e?.message || e);
+          // Códigos amigables
+          let codigo = 'ERROR_DGII';
+          if (/pfx|pkcs12|clave privada|certificado/i.test(msg)) codigo = 'CERTIFICADO_INVALIDO';
+          else if (/Semilla/i.test(msg)) codigo = 'SEMILLA_FALLO';
+          else if (/ValidacionCSC|token/i.test(msg)) codigo = 'AUTENTICACION_FALLO';
+          return new Response(JSON.stringify({
+            success: false,
+            error: msg,
+            codigo,
+            ambiente: config.ambiente,
+            duracion_ms: Date.now() - t0,
+          }), { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        }
+        break;
+      }
+
       case 'firmar': {
         if (!doc.xml_sin_firma) {
           return new Response(JSON.stringify({ error: 'No hay XML para firmar' }), {
