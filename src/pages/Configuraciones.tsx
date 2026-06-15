@@ -17,7 +17,7 @@ import { Save, Building2, Settings2, Hash, Loader2, Printer, Package, ShieldAler
 import { traducirError } from "@/lib/errorTranslator";
 import EditNumeracionModal from "@/components/ecf/EditNumeracionModal";
 import EcfSetupWizard from "@/components/ecf/EcfSetupWizard";
-import { ShieldCheck, Pencil, Plus } from "lucide-react";
+import { ShieldCheck, Pencil, Plus, KeyRound, CheckCircle2, XCircle } from "lucide-react";
 
 interface Config {
   nombre_comercial: string;
@@ -69,6 +69,33 @@ export default function Configuraciones() {
   const [loading, setLoading] = useState(true);
   const [editNumModal, setEditNumModal] = useState<{ open: boolean; id: string | null }>({ open: false, id: null });
   const [setupWizard, setSetupWizard] = useState(false);
+
+  // Probar firma + autenticación contra DGII
+  const [pruebaLoading, setPruebaLoading] = useState(false);
+  const [pruebaResult, setPruebaResult] = useState<any>(null);
+
+  const handleProbarFirma = async () => {
+    setPruebaLoading(true);
+    setPruebaResult(null);
+    try {
+      const { data, error } = await supabase.functions.invoke('ecf-dgii-client', {
+        body: { action: 'probar' },
+      });
+      if (error) throw error;
+      setPruebaResult(data);
+      if (data?.success) {
+        toast.success('Firma y autenticación DGII OK');
+      } else {
+        toast.error(traducirError(data?.error || 'Falló la prueba'));
+      }
+    } catch (e: any) {
+      const msg = traducirError(e?.message || String(e));
+      setPruebaResult({ success: false, error: msg, codigo: 'ERROR_RED' });
+      toast.error(msg);
+    } finally {
+      setPruebaLoading(false);
+    }
+  };
 
   // POS config state
   const [posConfig, setPosConfig] = useState(() => {
@@ -425,6 +452,54 @@ export default function Configuraciones() {
                 <Settings2 className="h-4 w-4 mr-2" /> Configurar e-CF
               </Button>
             </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="secondary"
+                  onClick={handleProbarFirma}
+                  disabled={pruebaLoading}
+                >
+                  {pruebaLoading
+                    ? <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    : <KeyRound className="h-4 w-4 mr-2" />}
+                  Probar firma + autenticación
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  Valida el certificado .pfx y obtiene un token contra DGII (TesteCF / CerteCF / Producción) según el ambiente configurado.
+                </span>
+              </div>
+
+              {pruebaResult && (
+                <div
+                  className={`p-3 rounded-lg border text-sm space-y-1 ${
+                    pruebaResult.success
+                      ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-400'
+                      : 'bg-destructive/10 border-destructive/30 text-destructive'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 font-medium">
+                    {pruebaResult.success
+                      ? <CheckCircle2 className="h-4 w-4" />
+                      : <XCircle className="h-4 w-4" />}
+                    {pruebaResult.success ? pruebaResult.mensaje : `Error: ${pruebaResult.error}`}
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 text-xs">
+                    {pruebaResult.codigo && <div><strong>Código DGII:</strong> {pruebaResult.codigo}</div>}
+                    {pruebaResult.ambiente && <div><strong>Ambiente:</strong> {pruebaResult.ambiente}</div>}
+                    {pruebaResult.duracion_ms !== undefined && <div><strong>Duración:</strong> {pruebaResult.duracion_ms} ms</div>}
+                    {pruebaResult.certificado_vigencia_hasta && (
+                      <div>
+                        <strong>Cert. vence:</strong>{" "}
+                        {new Date(pruebaResult.certificado_vigencia_hasta).toLocaleDateString('es-DO')}
+                        {pruebaResult.certificado_vencido && ' ⚠️ VENCIDO'}
+                      </div>
+                    )}
+                    {pruebaResult.token_preview && <div className="sm:col-span-2"><strong>Token:</strong> <code>{pruebaResult.token_preview}</code></div>}
+                    {pruebaResult.url_autenticacion && <div className="sm:col-span-2 truncate"><strong>URL Auth:</strong> {pruebaResult.url_autenticacion}</div>}
+                  </div>
+                </div>
+              )}
+            </CardContent>
           </Card>
 
           <Card>
