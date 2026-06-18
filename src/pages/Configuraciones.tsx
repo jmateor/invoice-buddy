@@ -13,7 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Save, Building2, Settings2, Hash, Loader2, Printer, Package, ShieldAlert, MonitorSmartphone, AlertTriangle, Calendar } from "lucide-react";
+import { Save, Building2, Settings2, Hash, Loader2, Printer, Package, ShieldAlert, MonitorSmartphone, AlertTriangle, Calendar, AlertCircle } from "lucide-react";
 import { traducirError } from "@/lib/errorTranslator";
 import EditNumeracionModal from "@/components/ecf/EditNumeracionModal";
 import EcfSetupWizard from "@/components/ecf/EcfSetupWizard";
