@@ -149,9 +149,10 @@ export default function Configuraciones() {
 
   const loadData = async () => {
     setLoading(true);
-    const [configRes, ncfRes] = await Promise.all([
+    const [configRes, ncfRes, ecfRes] = await Promise.all([
       supabase.from("configuracion_negocio").select("*").limit(1).maybeSingle(),
       supabase.from("ncf_secuencias").select("*").order("tipo_comprobante"),
+      supabase.from("ecf_configuracion").select("*").limit(1).maybeSingle(),
     ]);
 
     if (configRes.data) {
@@ -174,6 +175,7 @@ export default function Configuraciones() {
     }
 
     setNcfSeqs((ncfRes.data as any) || []);
+    setEcfConfig(ecfRes.data || null);
     setLoading(false);
   };
 
