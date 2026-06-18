@@ -480,6 +480,35 @@ export default function Configuraciones() {
               </Button>
             </CardHeader>
             <CardContent className="space-y-3">
+              {/* Pre-flight validations */}
+              {!ecfConfig?.certificado_path && (
+                <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400 text-sm flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-medium">Falta certificado digital (.pfx)</p>
+                    <p className="text-xs opacity-90 mt-0.5">
+                      Campo: <code>certificado_path</code>. Sube el archivo .pfx en <strong>Configurar e-CF → Certificado digital</strong>.
+                    </p>
+                  </div>
+                </div>
+              )}
+              {!ecfConfig?.url_autenticacion && (
+                <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400 text-sm flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-medium">Falta URL de autenticación DGII</p>
+                    <p className="text-xs opacity-90 mt-0.5">
+                      Campo: <code>url_autenticacion</code>. Usa <strong>Configurar e-CF</strong> para autocompletar según el ambiente:
+                    </p>
+                    <ul className="text-xs opacity-90 list-disc list-inside mt-1 space-y-0.5">
+                      <li><code>TesteCF</code>: https://ecf.dgii.gov.do/TesteCF/AutorizacionSeed</li>
+                      <li><code>CerteCF</code>: https://ecf.dgii.gov.do/CerteCF/AutorizacionSeed</li>
+                      <li><code>Producción</code>: https://ecf.dgii.gov.do/eCF/AutorizacionSeed</li>
+                    </ul>
+                  </div>
+                </div>
+              )}
+
               <div className="flex flex-wrap items-center gap-2">
                 <Button
                   variant="secondary"
