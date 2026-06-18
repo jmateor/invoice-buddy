@@ -71,13 +71,37 @@ export default function Configuraciones() {
   const [editNumModal, setEditNumModal] = useState<{ open: boolean; id: string | null }>({ open: false, id: null });
   const [setupWizard, setSetupWizard] = useState(false);
 
+  // e-CF config state
+  const [ecfConfig, setEcfConfig] = useState<any>(null);
+
   // Probar firma + autenticación contra DGII
   const [pruebaLoading, setPruebaLoading] = useState(false);
   const [pruebaResult, setPruebaResult] = useState<any>(null);
 
   const handleProbarFirma = async () => {
-    setPruebaLoading(true);
     setPruebaResult(null);
+
+    // Pre-flight validations
+    if (!ecfConfig?.certificado_path) {
+      setPruebaResult({
+        success: false,
+        error: 'No hay certificado .pfx cargado. Subelo en Configuraciones → Fiscal → Configurar e-CF (paso 3).',
+        codigo: 'SIN_CERTIFICADO',
+      });
+      toast.error('Falta certificado digital (.pfx)');
+      return;
+    }
+    if (!ecfConfig?.url_autenticacion) {
+      setPruebaResult({
+        success: false,
+        error: 'Falta la URL de autenticación DGII. Configúrala en Configuraciones → Fiscal → Configurar e-CF.',
+        codigo: 'SIN_URL_AUTH',
+      });
+      toast.error('Falta URL de autenticación DGII');
+      return;
+    }
+
+    setPruebaLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('ecf-dgii-client', {
         body: { action: 'probar' },
