@@ -13,7 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Save, Building2, Settings2, Hash, Loader2, Printer, Package, ShieldAlert, MonitorSmartphone, AlertTriangle, Calendar } from "lucide-react";
+import { Save, Building2, Settings2, Hash, Loader2, Printer, Package, ShieldAlert, MonitorSmartphone, AlertTriangle, Calendar, AlertCircle } from "lucide-react";
 import { traducirError } from "@/lib/errorTranslator";
 import EditNumeracionModal from "@/components/ecf/EditNumeracionModal";
 import EcfSetupWizard from "@/components/ecf/EcfSetupWizard";
@@ -71,13 +71,37 @@ export default function Configuraciones() {
   const [editNumModal, setEditNumModal] = useState<{ open: boolean; id: string | null }>({ open: false, id: null });
   const [setupWizard, setSetupWizard] = useState(false);
 
+  // e-CF config state
+  const [ecfConfig, setEcfConfig] = useState<any>(null);
+
   // Probar firma + autenticación contra DGII
   const [pruebaLoading, setPruebaLoading] = useState(false);
   const [pruebaResult, setPruebaResult] = useState<any>(null);
 
   const handleProbarFirma = async () => {
-    setPruebaLoading(true);
     setPruebaResult(null);
+
+    // Pre-flight validations
+    if (!ecfConfig?.certificado_path) {
+      setPruebaResult({
+        success: false,
+        error: 'No hay certificado .pfx cargado. Subelo en Configuraciones → Fiscal → Configurar e-CF (paso 3).',
+        codigo: 'SIN_CERTIFICADO',
+      });
+      toast.error('Falta certificado digital (.pfx)');
+      return;
+    }
+    if (!ecfConfig?.url_autenticacion) {
+      setPruebaResult({
+        success: false,
+        error: 'Falta la URL de autenticación DGII. Configúrala en Configuraciones → Fiscal → Configurar e-CF.',
+        codigo: 'SIN_URL_AUTH',
+      });
+      toast.error('Falta URL de autenticación DGII');
+      return;
+    }
+
+    setPruebaLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke('ecf-dgii-client', {
         body: { action: 'probar' },
@@ -125,9 +149,10 @@ export default function Configuraciones() {
 
   const loadData = async () => {
     setLoading(true);
-    const [configRes, ncfRes] = await Promise.all([
+    const [configRes, ncfRes, ecfRes] = await Promise.all([
       supabase.from("configuracion_negocio").select("*").limit(1).maybeSingle(),
       supabase.from("ncf_secuencias").select("*").order("tipo_comprobante"),
+      supabase.from("ecf_configuracion").select("*").limit(1).maybeSingle(),
     ]);
 
     if (configRes.data) {
@@ -150,6 +175,7 @@ export default function Configuraciones() {
     }
 
     setNcfSeqs((ncfRes.data as any) || []);
+    setEcfConfig(ecfRes.data || null);
     setLoading(false);
   };
 
@@ -454,6 +480,35 @@ export default function Configuraciones() {
               </Button>
             </CardHeader>
             <CardContent className="space-y-3">
+              {/* Pre-flight validations */}
+              {!ecfConfig?.certificado_path && (
+                <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400 text-sm flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-medium">Falta certificado digital (.pfx)</p>
+                    <p className="text-xs opacity-90 mt-0.5">
+                      Campo: <code>certificado_path</code>. Sube el archivo .pfx en <strong>Configurar e-CF → Certificado digital</strong>.
+                    </p>
+                  </div>
+                </div>
+              )}
+              {!ecfConfig?.url_autenticacion && (
+                <div className="p-3 rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400 text-sm flex items-start gap-2">
+                  <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-medium">Falta URL de autenticación DGII</p>
+                    <p className="text-xs opacity-90 mt-0.5">
+                      Campo: <code>url_autenticacion</code>. Usa <strong>Configurar e-CF</strong> para autocompletar según el ambiente:
+                    </p>
+                    <ul className="text-xs opacity-90 list-disc list-inside mt-1 space-y-0.5">
+                      <li><code>TesteCF</code>: https://ecf.dgii.gov.do/TesteCF/AutorizacionSeed</li>
+                      <li><code>CerteCF</code>: https://ecf.dgii.gov.do/CerteCF/AutorizacionSeed</li>
+                      <li><code>Producción</code>: https://ecf.dgii.gov.do/eCF/AutorizacionSeed</li>
+                    </ul>
+                  </div>
+                </div>
+              )}
+
               <div className="flex flex-wrap items-center gap-2">
                 <Button
                   variant="secondary"
