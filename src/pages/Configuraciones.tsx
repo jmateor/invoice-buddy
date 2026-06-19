@@ -19,6 +19,7 @@ import EditNumeracionModal from "@/components/ecf/EditNumeracionModal";
 import EcfSetupWizard from "@/components/ecf/EcfSetupWizard";
 import { ShieldCheck, Pencil, Plus, KeyRound, CheckCircle2, XCircle } from "lucide-react";
 import DgiiCodigoDiagnostico from "@/components/ecf/DgiiCodigoDiagnostico";
+import EcfPruebasHistorial from "@/components/ecf/EcfPruebasHistorial";
 
 interface Config {
   nombre_comercial: string;
@@ -77,26 +78,54 @@ export default function Configuraciones() {
   // Probar firma + autenticación contra DGII
   const [pruebaLoading, setPruebaLoading] = useState(false);
   const [pruebaResult, setPruebaResult] = useState<any>(null);
+  const [historialKey, setHistorialKey] = useState(0);
+
+  const logPrueba = async (payload: any) => {
+    if (!user) return;
+    try {
+      await supabase.from("ecf_pruebas_log").insert({
+        user_id: user.id,
+        success: !!payload?.success,
+        codigo: payload?.codigo ?? null,
+        ambiente: payload?.ambiente ?? null,
+        mensaje: payload?.mensaje ?? null,
+        error: payload?.error ?? null,
+        duracion_ms: payload?.duracion_ms ?? null,
+        certificado_vencido: payload?.certificado_vencido ?? null,
+        certificado_vigencia_hasta: payload?.certificado_vigencia_hasta ?? null,
+        url_autenticacion: payload?.url_autenticacion ?? null,
+        token_preview: payload?.token_preview ?? null,
+        raw: payload ?? null,
+      });
+      setHistorialKey((k) => k + 1);
+    } catch {
+      // no-op: el log no debe bloquear la UX
+    }
+  };
 
   const handleProbarFirma = async () => {
     setPruebaResult(null);
 
     // Pre-flight validations
     if (!ecfConfig?.certificado_path) {
-      setPruebaResult({
+      const r = {
         success: false,
         error: 'No hay certificado .pfx cargado. Subelo en Configuraciones → Fiscal → Configurar e-CF (paso 3).',
         codigo: 'SIN_CERTIFICADO',
-      });
+      };
+      setPruebaResult(r);
+      await logPrueba(r);
       toast.error('Falta certificado digital (.pfx)');
       return;
     }
     if (!ecfConfig?.url_autenticacion) {
-      setPruebaResult({
+      const r = {
         success: false,
         error: 'Falta la URL de autenticación DGII. Configúrala en Configuraciones → Fiscal → Configurar e-CF.',
         codigo: 'SIN_URL_AUTH',
-      });
+      };
+      setPruebaResult(r);
+      await logPrueba(r);
       toast.error('Falta URL de autenticación DGII');
       return;
     }
@@ -108,6 +137,7 @@ export default function Configuraciones() {
       });
       if (error) throw error;
       setPruebaResult(data);
+      await logPrueba(data);
       if (data?.success) {
         toast.success('Firma y autenticación DGII OK');
       } else {
@@ -115,7 +145,9 @@ export default function Configuraciones() {
       }
     } catch (e: any) {
       const msg = traducirError(e?.message || String(e));
-      setPruebaResult({ success: false, error: msg, codigo: 'ERROR_RED' });
+      const r = { success: false, error: msg, codigo: 'ERROR_RED' };
+      setPruebaResult(r);
+      await logPrueba(r);
       toast.error(msg);
     } finally {
       setPruebaLoading(false);
@@ -560,6 +592,8 @@ export default function Configuraciones() {
               )}
             </CardContent>
           </Card>
+
+          <EcfPruebasHistorial refreshKey={historialKey} />
 
           <Card>
             <CardHeader className="flex flex-row items-start justify-between gap-4">

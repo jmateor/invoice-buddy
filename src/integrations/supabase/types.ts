@@ -693,6 +693,57 @@ export type Database = {
           },
         ]
       }
+      ecf_pruebas_log: {
+        Row: {
+          ambiente: string | null
+          certificado_vencido: boolean | null
+          certificado_vigencia_hasta: string | null
+          codigo: string | null
+          created_at: string
+          duracion_ms: number | null
+          error: string | null
+          id: string
+          mensaje: string | null
+          raw: Json | null
+          success: boolean
+          token_preview: string | null
+          url_autenticacion: string | null
+          user_id: string
+        }
+        Insert: {
+          ambiente?: string | null
+          certificado_vencido?: boolean | null
+          certificado_vigencia_hasta?: string | null
+          codigo?: string | null
+          created_at?: string
+          duracion_ms?: number | null
+          error?: string | null
+          id?: string
+          mensaje?: string | null
+          raw?: Json | null
+          success?: boolean
+          token_preview?: string | null
+          url_autenticacion?: string | null
+          user_id: string
+        }
+        Update: {
+          ambiente?: string | null
+          certificado_vencido?: boolean | null
+          certificado_vigencia_hasta?: string | null
+          codigo?: string | null
+          created_at?: string
+          duracion_ms?: number | null
+          error?: string | null
+          id?: string
+          mensaje?: string | null
+          raw?: Json | null
+          success?: boolean
+          token_preview?: string | null
+          url_autenticacion?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       ecf_secuencias: {
         Row: {
           activo: boolean
