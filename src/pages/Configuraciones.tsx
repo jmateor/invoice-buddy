@@ -593,6 +593,8 @@ export default function Configuraciones() {
             </CardContent>
           </Card>
 
+          <EcfPruebasHistorial refreshKey={historialKey} />
+
           <Card>
             <CardHeader className="flex flex-row items-start justify-between gap-4">
               <div>
