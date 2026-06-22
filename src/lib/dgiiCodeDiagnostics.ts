@@ -99,6 +99,49 @@ const DIAGNOSTICOS: Record<string, DgiiDiagnostico> = {
       "Reintenta tras unos minutos; si persiste, abre ticket con DGII.",
     ],
   },
+  CERTIFICADO_EXPIRADO: {
+    codigo: "CERTIFICADO_EXPIRADO",
+    titulo: "Certificado digital .pfx expirado",
+    severidad: "error",
+    causa:
+      "La fecha 'certificado_vigencia_hasta' ya pasó. DGII rechazará toda firma con este certificado y no se podrán emitir e-CF.",
+    acciones: [
+      "Solicita la renovación del .pfx a tu Autoridad Certificadora (Avansi, Camara TIC, etc.).",
+      "Sube el nuevo .pfx en Configuraciones → Fiscal → Configurar e-CF.",
+      "Guarda la nueva contraseña y ejecuta 'Probar firma + autenticación'.",
+      "Mientras tanto, suspende la emisión de e-CF para evitar rechazos masivos.",
+    ],
+    ejemplo:
+      "Si el certificado vencía 2026-06-15 y hoy es 2026-06-22, debes renovar antes de emitir cualquier e-CF.",
+  },
+  AMBIENTE_CAMBIADO: {
+    codigo: "AMBIENTE_CAMBIADO",
+    titulo: "Se detectó un cambio de ambiente DGII",
+    severidad: "warning",
+    causa:
+      "El campo 'ambiente' en ecf_configuracion cambió (ej: CerteCF → Producción). Esto afecta a qué endpoint DGII se enviarán los e-CF reales.",
+    acciones: [
+      "Confirma que el cambio fue intencional (paso a Producción solo tras aprobación formal de DGII).",
+      "Verifica que las 5 URLs DGII correspondan al nuevo ambiente (autenticación, recepción, consulta, anulación, aprobación comercial).",
+      "Ejecuta 'Probar firma + autenticación' inmediatamente para validar el nuevo ambiente.",
+      "Si el cambio fue accidental, restaura el ambiente anterior antes de emitir más comprobantes.",
+    ],
+    ejemplo:
+      "Ejemplo: pasaste de CerteCF a Produccion → todo e-CF emitido ya cuenta fiscalmente. Asegúrate de tener aprobación DGII.",
+  },
+  PRODUCCION_AUTH_FALLO: {
+    codigo: "PRODUCCION_AUTH_FALLO",
+    titulo: "Falló autenticación contra Producción DGII",
+    severidad: "error",
+    causa:
+      "El intento de obtener token contra el ambiente de Producción falló. Mientras no se resuelva, no se podrán emitir e-CF fiscales reales.",
+    acciones: [
+      "Revisa el código DGII subyacente (CERTIFICADO_INVALIDO, SEMILLA_FALLO, AUTENTICACION_FALLO) en el historial.",
+      "Confirma que tu empresa tenga la aprobación formal de DGII para Producción (oficio).",
+      "Verifica que el RNC del .pfx coincida con el RNC del emisor configurado.",
+      "Si la falla persiste, revierte temporalmente el ambiente a CerteCF para no bloquear ventas y abre ticket con DGII.",
+    ],
+  },
 };
 
 export function diagnosticarCodigoDgii(codigo: string | null | undefined): DgiiDiagnostico | null {
