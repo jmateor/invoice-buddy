@@ -529,6 +529,10 @@ export default function Configuraciones() {
 
         {/* Fiscal Tab - Enhanced */}
         <TabsContent value="fiscal" className="mt-4 space-y-4">
+          <EcfAlertaTiempoRealBanner
+            alerta={alertaTiempoReal}
+            onDismiss={() => setAlertaTiempoReal(null)}
+          />
           <Card>
             <CardHeader className="flex flex-row items-start justify-between gap-4">
               <div>
