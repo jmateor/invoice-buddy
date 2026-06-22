@@ -20,6 +20,12 @@ import EcfSetupWizard from "@/components/ecf/EcfSetupWizard";
 import { ShieldCheck, Pencil, Plus, KeyRound, CheckCircle2, XCircle } from "lucide-react";
 import DgiiCodigoDiagnostico from "@/components/ecf/DgiiCodigoDiagnostico";
 import EcfPruebasHistorial from "@/components/ecf/EcfPruebasHistorial";
+import EcfAlertaTiempoRealBanner from "@/components/ecf/EcfAlertaTiempoRealBanner";
+import {
+  useEcfAlertasTiempoReal,
+  reportarFalloProduccion,
+  type EcfAlertaPayload,
+} from "@/hooks/useEcfAlertasTiempoReal";
 
 interface Config {
   nombre_comercial: string;
@@ -79,6 +85,16 @@ export default function Configuraciones() {
   const [pruebaLoading, setPruebaLoading] = useState(false);
   const [pruebaResult, setPruebaResult] = useState<any>(null);
   const [historialKey, setHistorialKey] = useState(0);
+  const [alertaTiempoReal, setAlertaTiempoReal] = useState<EcfAlertaPayload | null>(null);
+
+  // Suscripción en tiempo real: certificado vencido, cambio de ambiente, etc.
+  useEcfAlertasTiempoReal({
+    userId: user?.id,
+    onAlerta: (a) => {
+      setAlertaTiempoReal(a);
+      setHistorialKey((k) => k + 1);
+    },
+  });
 
   const logPrueba = async (payload: any) => {
     if (!user) return;
@@ -142,6 +158,23 @@ export default function Configuraciones() {
         toast.success('Firma y autenticación DGII OK');
       } else {
         toast.error(traducirError(data?.error || 'Falló la prueba'));
+        // Alerta crítica si el fallo es contra Producción
+        if (user?.id) {
+          const fueProd = await reportarFalloProduccion({
+            userId: user.id,
+            ambiente: data?.ambiente ?? ecfConfig?.ambiente ?? null,
+            codigoOriginal: data?.codigo ?? null,
+            errorOriginal: data?.error ?? null,
+          });
+          if (fueProd) {
+            setAlertaTiempoReal({
+              codigo: "PRODUCCION_AUTH_FALLO",
+              mensaje: `Falló la autenticación contra PRODUCCIÓN DGII (${data?.codigo || "sin código"}).`,
+              ambiente: data?.ambiente ?? ecfConfig?.ambiente ?? null,
+            });
+            setHistorialKey((k) => k + 1);
+          }
+        }
       }
     } catch (e: any) {
       const msg = traducirError(e?.message || String(e));
