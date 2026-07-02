@@ -23,6 +23,7 @@ import { ShieldCheck, Pencil, Plus, KeyRound, CheckCircle2, XCircle } from "luci
 import DgiiCodigoDiagnostico from "@/components/ecf/DgiiCodigoDiagnostico";
 import EcfPruebasHistorial from "@/components/ecf/EcfPruebasHistorial";
 import EcfAlertaTiempoRealBanner from "@/components/ecf/EcfAlertaTiempoRealBanner";
+import EcfProduccionChecklist from "@/components/ecf/EcfProduccionChecklist";
 import {
   useEcfAlertasTiempoReal,
   reportarFalloProduccion,
@@ -689,6 +690,8 @@ export default function Configuraciones() {
           </Card>
 
           <EcfPruebasHistorial refreshKey={historialKey} />
+
+          <EcfProduccionChecklist userId={user?.id} refreshKey={historialKey} />
 
           <Card>
             <CardHeader className="flex flex-row items-start justify-between gap-4">
