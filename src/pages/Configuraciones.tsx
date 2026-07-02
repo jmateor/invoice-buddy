@@ -12,6 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Clock } from "lucide-react";
 import { toast } from "sonner";
 import { Save, Building2, Settings2, Hash, Loader2, Printer, Package, ShieldAlert, MonitorSmartphone, AlertTriangle, Calendar, AlertCircle } from "lucide-react";
 import { traducirError } from "@/lib/errorTranslator";
@@ -87,9 +89,23 @@ export default function Configuraciones() {
   const [historialKey, setHistorialKey] = useState(0);
   const [alertaTiempoReal, setAlertaTiempoReal] = useState<EcfAlertaPayload | null>(null);
 
+  // Intervalo configurable para el re-chequeo periódico de alertas en tiempo real
+  const INTERVAL_OPTIONS: { value: string; label: string; ms: number }[] = [
+    { value: "15m", label: "Cada 15 minutos", ms: 15 * 60 * 1000 },
+    { value: "1h", label: "Cada hora (recomendado)", ms: 60 * 60 * 1000 },
+    { value: "6h", label: "Cada 6 horas", ms: 6 * 60 * 60 * 1000 },
+    { value: "24h", label: "Diario (24 horas)", ms: 24 * 60 * 60 * 1000 },
+  ];
+  const [intervaloAlerta, setIntervaloAlerta] = useState<string>(() => {
+    return localStorage.getItem("ecf:alertaIntervalo") || "1h";
+  });
+  const intervaloMs =
+    INTERVAL_OPTIONS.find((o) => o.value === intervaloAlerta)?.ms ?? 60 * 60 * 1000;
+
   // Suscripción en tiempo real: certificado vencido, cambio de ambiente, etc.
   useEcfAlertasTiempoReal({
     userId: user?.id,
+    intervaloMs,
     onAlerta: (a) => {
       setAlertaTiempoReal(a);
       setHistorialKey((k) => k + 1);
