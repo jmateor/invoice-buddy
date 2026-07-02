@@ -50,6 +50,11 @@ async function persistirAlerta(userId: string, payload: EcfAlertaPayload) {
 interface Options {
   userId: string | undefined;
   onAlerta?: (a: EcfAlertaPayload) => void;
+  /**
+   * Intervalo (ms) del re-chequeo periódico de vencimiento de certificado.
+   * Por defecto 1 hora. Configurable desde Configuraciones → Fiscal.
+   */
+  intervaloMs?: number;
 }
 
 /**
@@ -58,7 +63,7 @@ interface Options {
  * - Detecta certificado expirado o por expirar (< 7 días)
  * - Registra cada evento en ecf_pruebas_log para que aparezca en el historial de troubleshooting.
  */
-export function useEcfAlertasTiempoReal({ userId, onAlerta }: Options) {
+export function useEcfAlertasTiempoReal({ userId, onAlerta, intervaloMs }: Options) {
   const lastAmbienteRef = useRef<string | null>(null);
   const lastCertAlertadoRef = useRef<string | null>(null);
 
@@ -156,7 +161,8 @@ export function useEcfAlertasTiempoReal({ userId, onAlerta }: Options) {
       )
       .subscribe();
 
-    // 3) Re-chequeo periódico de vencimiento (1 vez por hora)
+    // 3) Re-chequeo periódico de vencimiento (configurable, por defecto 1h)
+    const ms = Math.max(60_000, intervaloMs ?? 60 * 60 * 1000);
     const interval = setInterval(async () => {
       const { data } = await supabase
         .from("ecf_configuracion")
@@ -168,14 +174,14 @@ export function useEcfAlertasTiempoReal({ userId, onAlerta }: Options) {
         (data as any).certificado_vigencia_hasta ?? null,
         (data as any).ambiente ?? null
       );
-    }, 60 * 60 * 1000);
+    }, ms);
 
     return () => {
       mounted = false;
       clearInterval(interval);
       supabase.removeChannel(channel);
     };
-  }, [userId, onAlerta]);
+  }, [userId, onAlerta, intervaloMs]);
 }
 
 /**
