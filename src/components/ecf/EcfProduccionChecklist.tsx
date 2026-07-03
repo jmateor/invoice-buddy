@@ -19,6 +19,7 @@ export default function EcfProduccionChecklist({ userId, refreshKey }: Props) {
     bloqueantesPendientes,
     pct,
     listoParaProd,
+    refresh,
   } = useEcfProduccionChecklist(userId, refreshKey);
 
   return (
