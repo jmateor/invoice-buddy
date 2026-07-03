@@ -31,7 +31,7 @@ export function useEcfProduccionChecklist(
   const [loading, setLoading] = useState(true);
   const [tick, setTick] = useState(0);
 
-  const forceRefresh = () => setTick((t) => t + 1);
+  const forceRefresh = useCallback(() => setTick((t) => t + 1), []);
 
   useEffect(() => {
     if (refreshKey !== undefined) {
