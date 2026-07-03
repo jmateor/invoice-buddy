@@ -20,6 +20,7 @@ export interface ProduccionChecklistResult {
   bloqueantesPendientes: number;
   pct: number;
   listoParaProd: boolean;
+  refresh: () => void;
 }
 
 export function useEcfProduccionChecklist(
