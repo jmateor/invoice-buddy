@@ -34,7 +34,7 @@ export default function EcfProduccionChecklist({ userId, refreshKey }: Props) {
             Verifica automáticamente qué puntos técnicos están listos para emitir e-CF fiscales reales en DGII.
           </CardDescription>
         </div>
-        <Button variant="outline" size="sm" onClick={() => useEcfProduccionChecklist(userId, refreshKey)} disabled={loading}>
+        <Button variant="outline" size="sm" onClick={refresh} disabled={loading}>
           {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
           <span className="ml-2 hidden sm:inline">Reverificar</span>
         </Button>
