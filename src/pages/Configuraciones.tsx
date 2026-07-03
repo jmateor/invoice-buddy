@@ -24,6 +24,7 @@ import DgiiCodigoDiagnostico from "@/components/ecf/DgiiCodigoDiagnostico";
 import EcfPruebasHistorial from "@/components/ecf/EcfPruebasHistorial";
 import EcfAlertaTiempoRealBanner from "@/components/ecf/EcfAlertaTiempoRealBanner";
 import EcfProduccionChecklist from "@/components/ecf/EcfProduccionChecklist";
+import EcfProduccionResumen from "@/components/ecf/EcfProduccionResumen";
 import {
   useEcfAlertasTiempoReal,
   reportarFalloProduccion,
