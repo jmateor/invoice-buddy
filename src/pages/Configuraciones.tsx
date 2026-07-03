@@ -552,6 +552,8 @@ export default function Configuraciones() {
             onDismiss={() => setAlertaTiempoReal(null)}
           />
 
+          <EcfProduccionResumen userId={user?.id} refreshKey={historialKey} />
+
           <Tabs defaultValue="estado" className="w-full">
             <TabsList className="grid grid-cols-4 w-full max-w-2xl">
               <TabsTrigger value="estado">
