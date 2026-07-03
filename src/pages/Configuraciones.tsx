@@ -550,49 +550,34 @@ export default function Configuraciones() {
             alerta={alertaTiempoReal}
             onDismiss={() => setAlertaTiempoReal(null)}
           />
-          <Card>
-            <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Clock className="h-4 w-4 text-primary" />
-                Alertas en tiempo real
-              </CardTitle>
-              <CardDescription>
-                Frecuencia con la que se revisa vencimiento de certificado y cambios de ambiente DGII.
-                Los eventos siempre se detectan al instante vía suscripción; este intervalo controla el re-chequeo periódico de respaldo.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                <Label htmlFor="intervalo-alerta" className="sm:w-56 shrink-0">
-                  Intervalo de verificación
-                </Label>
-                <Select
-                  value={intervaloAlerta}
-                  onValueChange={(v) => {
-                    setIntervaloAlerta(v);
-                    localStorage.setItem("ecf:alertaIntervalo", v);
-                    const label = INTERVAL_OPTIONS.find((o) => o.value === v)?.label ?? v;
-                    toast.success(`Intervalo actualizado: ${label}`);
-                  }}
-                >
-                  <SelectTrigger id="intervalo-alerta" className="sm:max-w-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {INTERVAL_OPTIONS.map((o) => (
-                      <SelectItem key={o.value} value={o.value}>
-                        {o.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <p className="text-xs text-muted-foreground mt-3">
-                💡 Usa <strong>cada 15 min</strong> si estás en pruebas activas contra CerteCF, y <strong>diario</strong> en producción estable.
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
+
+          <Tabs defaultValue="estado" className="w-full">
+            <TabsList className="grid grid-cols-4 w-full max-w-2xl">
+              <TabsTrigger value="estado">
+                <ShieldCheck className="h-4 w-4 mr-1.5 hidden sm:inline" />
+                Estado
+              </TabsTrigger>
+              <TabsTrigger value="ecf">
+                <KeyRound className="h-4 w-4 mr-1.5 hidden sm:inline" />
+                e-CF
+              </TabsTrigger>
+              <TabsTrigger value="numeracion">
+                <Hash className="h-4 w-4 mr-1.5 hidden sm:inline" />
+                Numeración
+              </TabsTrigger>
+              <TabsTrigger value="alertas">
+                <Clock className="h-4 w-4 mr-1.5 hidden sm:inline" />
+                Alertas
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="estado" className="mt-4 space-y-4">
+              <EcfProduccionChecklist userId={user?.id} refreshKey={historialKey} />
+              <EcfPruebasHistorial refreshKey={historialKey} />
+            </TabsContent>
+
+            <TabsContent value="ecf" className="mt-4 space-y-4">
+              <Card>
             <CardHeader className="flex flex-row items-start justify-between gap-4">
               <div>
                 <CardTitle className="text-base flex items-center gap-2">
@@ -688,12 +673,10 @@ export default function Configuraciones() {
               )}
             </CardContent>
           </Card>
+            </TabsContent>
 
-          <EcfPruebasHistorial refreshKey={historialKey} />
-
-          <EcfProduccionChecklist userId={user?.id} refreshKey={historialKey} />
-
-          <Card>
+            <TabsContent value="numeracion" className="mt-4 space-y-4">
+              <Card>
             <CardHeader className="flex flex-row items-start justify-between gap-4">
               <div>
                 <CardTitle className="text-base">Numeración fiscal (NCF/e-CF)</CardTitle>
@@ -831,6 +814,53 @@ export default function Configuraciones() {
               </div>
             </CardContent>
           </Card>
+            </TabsContent>
+
+            <TabsContent value="alertas" className="mt-4 space-y-4">
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-primary" />
+                    Alertas en tiempo real
+                  </CardTitle>
+                  <CardDescription>
+                    Frecuencia con la que se revisa vencimiento de certificado y cambios de ambiente DGII.
+                    Los eventos siempre se detectan al instante vía suscripción; este intervalo controla el re-chequeo periódico de respaldo.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                    <Label htmlFor="intervalo-alerta" className="sm:w-56 shrink-0">
+                      Intervalo de verificación
+                    </Label>
+                    <Select
+                      value={intervaloAlerta}
+                      onValueChange={(v) => {
+                        setIntervaloAlerta(v);
+                        localStorage.setItem("ecf:alertaIntervalo", v);
+                        const label = INTERVAL_OPTIONS.find((o) => o.value === v)?.label ?? v;
+                        toast.success(`Intervalo actualizado: ${label}`);
+                      }}
+                    >
+                      <SelectTrigger id="intervalo-alerta" className="sm:max-w-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {INTERVAL_OPTIONS.map((o) => (
+                          <SelectItem key={o.value} value={o.value}>
+                            {o.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-3">
+                    💡 Usa <strong>cada 15 min</strong> si estás en pruebas activas contra CerteCF, y <strong>diario</strong> en producción estable.
+                  </p>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
         </TabsContent>
       </Tabs>
 
