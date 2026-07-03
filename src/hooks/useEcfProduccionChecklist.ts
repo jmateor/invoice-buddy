@@ -235,5 +235,6 @@ export function useEcfProduccionChecklist(
     bloqueantesPendientes,
     pct,
     listoParaProd,
+    refresh: forceRefresh,
   };
 }
