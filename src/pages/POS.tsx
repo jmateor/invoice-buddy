@@ -18,6 +18,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { generateInvoicePDF, type NegocioData } from "@/lib/generateInvoicePDF";
 import QuickClientModal from "@/components/QuickClientModal";
 import PaymentModal from "@/components/PaymentModal";
+import type { DesglosePago } from "@/components/PaymentModal";
 
 interface Cliente { id: string; nombre: string; rnc_cedula: string | null; telefono: string | null; email: string | null; direccion: string | null; }
 interface Categoria { id: string; nombre: string; }
@@ -260,7 +261,7 @@ export default function POS() {
     setPaymentModalOpen(true);
   };
 
-  const handleSave = async () => {
+  const handleSave = async (desglose?: DesglosePago) => {
     setPaymentModalOpen(false);
     setSaving(true);
     try {
@@ -273,11 +274,28 @@ export default function POS() {
       const { data: seqData } = await supabase.rpc("nextval" as any, { seq_name: "factura_numero_seq" });
       const numero = `FAC-${String(seqData || Date.now()).padStart(6, "0")}`;
 
+      const dg = desglose || {
+        monto_efectivo: metodoPago === "efectivo" ? total : 0,
+        monto_tarjeta: metodoPago === "tarjeta" ? total : 0,
+        monto_cheque: metodoPago === "transferencia" ? total : 0,
+        monto_credito: 0,
+        monto_bonos: metodoPago === "nota_credito" ? total : 0,
+        monto_permuta: 0,
+        monto_otros: 0,
+      };
+
       const { data: factura, error: facError } = await supabase.from("facturas").insert({
         numero, cliente_id: clienteId, subtotal, itbis: totalItbis,
         descuento: desc, total, metodo_pago: metodoPago as any,
         notas: notas || null, user_id: user!.id,
         tipo_comprobante: tipoComprobante, ncf: ncf || "",
+        monto_efectivo: dg.monto_efectivo,
+        monto_tarjeta: dg.monto_tarjeta,
+        monto_cheque: dg.monto_cheque,
+        monto_credito: dg.monto_credito,
+        monto_bonos: dg.monto_bonos,
+        monto_permuta: dg.monto_permuta,
+        monto_otros: dg.monto_otros,
       } as any).select().single();
 
       if (facError) throw facError;
