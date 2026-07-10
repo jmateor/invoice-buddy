@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Clock } from "lucide-react";
 import { toast } from "sonner";
-import { Save, Building2, Settings2, Hash, Loader2, Printer, Package, ShieldAlert, MonitorSmartphone, AlertTriangle, Calendar, AlertCircle } from "lucide-react";
+import { Save, Building2, Settings2, Hash, Loader2, Printer, Package, ShieldAlert, MonitorSmartphone, AlertTriangle, Calendar, AlertCircle, Zap, FileText, Receipt } from "lucide-react";
 import { traducirError } from "@/lib/errorTranslator";
 import EditNumeracionModal from "@/components/ecf/EditNumeracionModal";
 import EcfSetupWizard from "@/components/ecf/EcfSetupWizard";
@@ -467,47 +467,54 @@ export default function Configuraciones() {
         <TabsContent value="impresion" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Configuración de Impresión</CardTitle>
-              <CardDescription>Formato de papel predeterminado para facturas PDF</CardDescription>
+              <CardTitle className="text-xl">Configuración de Impresión</CardTitle>
+              <CardDescription>Administra los datos de impresión, formatos y automatizaciones.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center gap-3 p-3 rounded-lg border border-border">
+            <CardContent className="space-y-6">
+              <div className="flex items-center gap-4 p-4 rounded-xl border border-border bg-muted/30">
+                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                  <Zap className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-foreground">Impresión automática al facturar</p>
+                  <p className="text-xs text-muted-foreground">Abre la ventana de impresión automáticamente al crear factura</p>
+                </div>
                 <Switch
                   checked={config.impresion_automatica}
                   onCheckedChange={v => updateField("impresion_automatica", v)}
                 />
-                <div>
-                  <p className="text-sm font-medium">Impresión automática al facturar</p>
-                  <p className="text-xs text-muted-foreground">Abre la ventana de impresión automáticamente al crear factura</p>
-                </div>
               </div>
               <div className="space-y-3">
-                <Label>Formato de papel predeterminado</Label>
-                <div className="grid gap-3 md:grid-cols-3">
+                <Label className="text-base font-semibold">Formato de papel predeterminado</Label>
+                <div className="grid gap-4 md:grid-cols-3">
                   {([
-                    { key: "carta", label: "📄 Carta / A4", desc: "Impresora de oficina, full design con logo y colores" },
-                    { key: "80mm", label: "🧾 Térmica 80mm", desc: "Impresora de punto de venta estándar" },
-                    { key: "58mm", label: "🧾 Térmica 58mm", desc: "Impresora compacta o portátil" },
-                  ] as const).map(opt => (
-                    <button
-                      key={opt.key}
-                      type="button"
-                      onClick={() => updateField("formato_impresion", opt.key)}
-                      className={`flex flex-col items-start p-3 rounded-lg border-2 text-left transition-all ${config.formato_impresion === opt.key
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-muted-foreground"
-                        }`}
-                    >
-                      <span className="font-semibold text-sm text-foreground">{opt.label}</span>
-                      <span className="text-xs text-muted-foreground mt-1">{opt.desc}</span>
-                    </button>
-                  ))}
+                    { key: "carta", label: "Carta / A4", desc: "Impresora de oficina, diseño completo con logo y colores.", Icon: FileText },
+                    { key: "80mm", label: "Térmica 80mm", desc: "Impresora de punto de venta estándar.", Icon: Receipt },
+                    { key: "58mm", label: "Térmica 58mm", desc: "Impresora compacta o portátil.", Icon: Receipt },
+                  ] as const).map(opt => {
+                    const selected = config.formato_impresion === opt.key;
+                    return (
+                      <button
+                        key={opt.key}
+                        type="button"
+                        onClick={() => updateField("formato_impresion", opt.key)}
+                        className={`flex flex-col items-start gap-3 p-5 rounded-xl border-2 text-left transition-all ${selected
+                          ? "border-primary bg-primary/5 shadow-sm"
+                          : "border-border hover:border-muted-foreground/50 bg-card"
+                          }`}
+                      >
+                        <opt.Icon className={`h-6 w-6 ${selected ? "text-primary" : "text-muted-foreground"}`} />
+                        <span className="font-semibold text-base text-foreground">{opt.label}</span>
+                        <span className="text-sm text-muted-foreground leading-snug">{opt.desc}</span>
+                      </button>
+                    );
+                  })}
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-muted-foreground italic">
                   Puedes cambiar el formato al momento de generar cualquier factura también.
                 </p>
               </div>
-              <Button onClick={handleSaveConfig} disabled={saving}>
+              <Button onClick={handleSaveConfig} disabled={saving} size="lg" className="w-full md:w-auto">
                 {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
                 Guardar Configuración de Impresión
               </Button>
