@@ -25,6 +25,7 @@ import EcfPruebasHistorial from "@/components/ecf/EcfPruebasHistorial";
 import EcfAlertaTiempoRealBanner from "@/components/ecf/EcfAlertaTiempoRealBanner";
 import EcfProduccionChecklist from "@/components/ecf/EcfProduccionChecklist";
 import EcfProduccionResumen from "@/components/ecf/EcfProduccionResumen";
+import ImpresionPreview from "@/components/ImpresionPreview";
 import {
   useEcfAlertasTiempoReal,
   reportarFalloProduccion,
@@ -465,6 +466,7 @@ export default function Configuraciones() {
 
         {/* Impresion Tab */}
         <TabsContent value="impresion" className="mt-4">
+          <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
           <Card>
             <CardHeader>
               <CardTitle className="text-xl">Configuración de Impresión</CardTitle>
@@ -520,6 +522,20 @@ export default function Configuraciones() {
               </Button>
             </CardContent>
           </Card>
+          <ImpresionPreview
+            formato={config.formato_impresion}
+            negocio={{
+              nombre_comercial: config.nombre_comercial,
+              rnc: config.rnc,
+              direccion: config.direccion,
+              telefono: config.telefono,
+              whatsapp: config.whatsapp,
+              email: config.email,
+              mensaje_factura: config.mensaje_factura,
+              logo_url: config.logo_url,
+            }}
+          />
+          </div>
         </TabsContent>
 
         {/* Inventario Tab */}
