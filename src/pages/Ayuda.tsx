@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import {
   MonitorSmartphone, FileText, Stamp, Package, Users, ShoppingCart,
-  BarChart3, ClipboardList, RotateCcw, Settings, Shield,
+  BarChart3, ClipboardList, RotateCcw, Settings, Shield, FileSignature,
 } from "lucide-react";
 
 interface Guia {
@@ -13,6 +13,16 @@ interface Guia {
 }
 
 const GUIAS: Guia[] = [
+  {
+    icon: FileSignature, titulo: "Cotizaciones",
+    resumen: "Propuestas comerciales que se convierten en factura con un clic.",
+    pasos: [
+      { titulo: "Crea la cotización", descripcion: "Selecciona cliente, agrega productos o líneas libres y define vencimiento. No consume NCF." },
+      { titulo: "Envía y da seguimiento", descripcion: "Cambia el estado a 'Enviada' cuando la remitas; 'Aprobada' al confirmar el cliente." },
+      { titulo: "Convierte a factura", descripcion: "Botón 'Facturar' en cotizaciones aprobadas → crea una factura borrador con los mismos ítems." },
+      { titulo: "Emite con NCF", descripcion: "Desde la factura borrador, pulsa Emitir para asignar el NCF y descontar inventario." },
+    ],
+  },
   {
     icon: MonitorSmartphone, titulo: "Punto de Venta (POS)",
     resumen: "Cobros rápidos al consumidor final.",
