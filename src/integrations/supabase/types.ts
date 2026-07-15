@@ -259,6 +259,81 @@ export type Database = {
         }
         Relationships: []
       }
+      cotizaciones: {
+        Row: {
+          cliente_id: string
+          created_at: string
+          descuento: number
+          estado: string
+          factura_id: string | null
+          fecha: string
+          fecha_conversion: string | null
+          fecha_vencimiento: string | null
+          id: string
+          itbis: number
+          notas: string | null
+          numero: string
+          subtotal: number
+          terminos: string | null
+          total: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cliente_id: string
+          created_at?: string
+          descuento?: number
+          estado?: string
+          factura_id?: string | null
+          fecha?: string
+          fecha_conversion?: string | null
+          fecha_vencimiento?: string | null
+          id?: string
+          itbis?: number
+          notas?: string | null
+          numero: string
+          subtotal?: number
+          terminos?: string | null
+          total?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cliente_id?: string
+          created_at?: string
+          descuento?: number
+          estado?: string
+          factura_id?: string | null
+          fecha?: string
+          fecha_conversion?: string | null
+          fecha_vencimiento?: string | null
+          id?: string
+          itbis?: number
+          notas?: string | null
+          numero?: string
+          subtotal?: number
+          terminos?: string | null
+          total?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cotizaciones_cliente_id_fkey"
+            columns: ["cliente_id"]
+            isOneToOne: false
+            referencedRelation: "clientes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cotizaciones_factura_id_fkey"
+            columns: ["factura_id"]
+            isOneToOne: false
+            referencedRelation: "facturas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       detalle_compras: {
         Row: {
           cantidad: number
@@ -294,6 +369,57 @@ export type Database = {
           },
           {
             foreignKeyName: "detalle_compras_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "productos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      detalle_cotizaciones: {
+        Row: {
+          cantidad: number
+          cotizacion_id: string
+          created_at: string
+          descripcion: string
+          id: string
+          itbis: number
+          precio_unitario: number
+          producto_id: string | null
+          subtotal: number
+        }
+        Insert: {
+          cantidad?: number
+          cotizacion_id: string
+          created_at?: string
+          descripcion: string
+          id?: string
+          itbis?: number
+          precio_unitario?: number
+          producto_id?: string | null
+          subtotal?: number
+        }
+        Update: {
+          cantidad?: number
+          cotizacion_id?: string
+          created_at?: string
+          descripcion?: string
+          id?: string
+          itbis?: number
+          precio_unitario?: number
+          producto_id?: string | null
+          subtotal?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "detalle_cotizaciones_cotizacion_id_fkey"
+            columns: ["cotizacion_id"]
+            isOneToOne: false
+            referencedRelation: "cotizaciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "detalle_cotizaciones_producto_id_fkey"
             columns: ["producto_id"]
             isOneToOne: false
             referencedRelation: "productos"
@@ -1369,6 +1495,7 @@ export type Database = {
       }
       next_invoice_number: { Args: { p_user_id: string }; Returns: string }
       next_ncf: { Args: { p_tipo: string; p_user_id: string }; Returns: string }
+      next_quote_number: { Args: { p_user_id: string }; Returns: string }
       validar_secuencia_ncf: {
         Args: { p_tipo: string; p_user_id: string }
         Returns: Json
