@@ -23,6 +23,7 @@ import OrdenesServicio from "./pages/OrdenesServicio";
 import Categorias from "./pages/Categorias";
 import Auditoria from "./pages/Auditoria";
 import NotasCredito from "./pages/NotasCredito";
+import Cotizaciones from "./pages/Cotizaciones";
 import CentroFiscal from "./pages/CentroFiscal";
 import NotFound from "./pages/NotFound";
 
@@ -67,6 +68,7 @@ const App = () => (
             <Route path="/categorias" element={<ProtectedRoute><Categorias /></ProtectedRoute>} />
             <Route path="/auditoria" element={<ProtectedRoute><Auditoria /></ProtectedRoute>} />
             <Route path="/notas-credito" element={<ProtectedRoute><NotasCredito /></ProtectedRoute>} />
+            <Route path="/cotizaciones" element={<ProtectedRoute><Cotizaciones /></ProtectedRoute>} />
             <Route path="/fiscal" element={<ProtectedRoute><CentroFiscal /></ProtectedRoute>} />
             <Route path="/ayuda" element={<ProtectedRoute><Ayuda /></ProtectedRoute>} />
             {/* Legacy redirects: módulos unificados */}
